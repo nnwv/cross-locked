@@ -233,18 +233,6 @@ h2 {
   overflow: hidden;
 }
 
-.board-logo {
-  position: absolute;
-  top: 15px;
-  left: 16px;
-  z-index: 2;
-  width: clamp(140px, 22%, 230px);
-  height: auto;
-  opacity: 0.92;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.12));
-  pointer-events: none;
-}
-
 .board {
   --socket-size: min(calc((100cqw - 38px) / 13), calc((100cqh - 38px) / 13), 58px);
   --socket-gap: 2px;
@@ -747,12 +735,6 @@ li {
   .board {
     gap: 6px;
     padding: 82px 8px 8px;
-  }
-
-  .board-logo {
-    width: clamp(110px, 30%, 150px);
-    top: 14px;
-    left: 12px;
   }
 
   .cell {
