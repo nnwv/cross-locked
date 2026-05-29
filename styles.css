@@ -282,12 +282,12 @@ h2 {
 }
 
 .board {
-  --socket-size: min(calc((100cqw - 42px) / 15), calc((100cqh - 26px) / 11), 68px);
-  --socket-gap: 2px;
+  --socket-size: min(calc((100cqw - 32px) / 11), calc((100cqh - 24px) / 7), 78px);
+  --socket-gap: 3px;
   position: relative;
   display: grid;
-  grid-template-columns: repeat(15, var(--socket-size));
-  grid-template-rows: repeat(11, var(--socket-size));
+  grid-template-columns: repeat(11, var(--socket-size));
+  grid-template-rows: repeat(7, var(--socket-size));
   gap: var(--socket-gap);
   justify-content: center;
   align-content: center;

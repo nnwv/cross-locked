@@ -64,25 +64,25 @@ const LINE_DEFS = X_DEFS.flatMap((x) => {
 
 const BOARD_LAYOUT = {
   "north-west": {
-    label: { col: 3, row: 3 },
-    cells: { top: [4, 4], left: [3, 5], c: [4, 5], right: [5, 5], bottom: [4, 6] }
+    label: { col: 1, row: 1 },
+    cells: { top: [2, 2], left: [1, 3], c: [2, 3], right: [3, 3], bottom: [2, 4] }
   },
   "north-east": {
-    label: { col: 11, row: 3 },
-    cells: { top: [12, 4], left: [11, 5], c: [12, 5], right: [13, 5], bottom: [12, 6] }
+    label: { col: 9, row: 1 },
+    cells: { top: [10, 2], left: [9, 3], c: [10, 3], right: [11, 3], bottom: [10, 4] }
   },
   super: {
-    label: { col: 7, row: 6 },
+    label: { col: 4, row: 4 },
     cells: {
-      top: [8, 6],
-      "inner-top": [8, 7],
-      left: [6, 8],
-      "inner-left": [7, 8],
-      c: [8, 8],
-      "inner-right": [9, 8],
-      right: [10, 8],
-      "inner-bottom": [8, 9],
-      bottom: [8, 10]
+      top: [6, 3],
+      "inner-top": [6, 4],
+      left: [4, 5],
+      "inner-left": [5, 5],
+      c: [6, 5],
+      "inner-right": [7, 5],
+      right: [8, 5],
+      "inner-bottom": [6, 6],
+      bottom: [6, 7]
     }
   }
 };
