@@ -1,22 +1,14 @@
-const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
-const RANK_VALUE = Object.fromEntries(RANKS.map((rank, index) => [rank, index + 2]));
-const TILE_POINTS = {
-  "2": 10, "3": 10, "4": 10, "5": 10, "6": 10, "7": 10, "8": 10, "9": 10,
-  "10": 20, J: 20, Q: 20, K: 20, A: 50, Joker: 50
-};
-const ACTIONS = {
-  lock: { label: "Lock", limit: 1, count: 8 },
-  unlock: { label: "Unlock", limit: 1, count: 8 },
-  replace1: { label: "Replace 1", limit: 1, count: 16 },
-  replace2: { label: "Replace 2", limit: 2, count: 8 },
-  superReplace: { label: "Super", limit: 3, count: 4 },
-  draw4: { label: "Draw 4", limit: 0, count: 4 }
-};
+const RANKS = ["1", "2", "3", "4", "5"];
+const TOTAL_ROUNDS = 2;
+const BASE_BOMB_CHANCE = 8;
+const BOMB_CHANCE_STEP = 4;
+const MAX_BOMB_CHANCE = 28;
+const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
 
 const X_DEFS = [
   {
     id: "north-west",
-    name: "Small X",
+    name: "Small Cross",
     type: "small",
     cells: [
       { id: "nw-0", row: 1, col: 2, pos: "top" },
@@ -28,7 +20,7 @@ const X_DEFS = [
   },
   {
     id: "north-east",
-    name: "Small X",
+    name: "Small Cross",
     type: "small",
     cells: [
       { id: "ne-0", row: 1, col: 2, pos: "top" },
@@ -40,7 +32,7 @@ const X_DEFS = [
   },
   {
     id: "super",
-    name: "Super X",
+    name: "Big Cross",
     type: "super",
     cells: [
       { id: "su-0", row: 1, col: 3, pos: "top" },
@@ -53,45 +45,20 @@ const X_DEFS = [
       { id: "su-7", row: 4, col: 3, pos: "inner-bottom" },
       { id: "su-8", row: 5, col: 3, pos: "bottom" }
     ]
-  },
-  {
-    id: "south-west",
-    name: "Small X",
-    type: "small",
-    cells: [
-      { id: "sw-0", row: 1, col: 2, pos: "top" },
-      { id: "sw-1", row: 2, col: 1, pos: "left" },
-      { id: "sw-2", row: 2, col: 2, pos: "c", center: true },
-      { id: "sw-3", row: 2, col: 3, pos: "right" },
-      { id: "sw-4", row: 3, col: 2, pos: "bottom" }
-    ]
-  },
-  {
-    id: "south-east",
-    name: "Small X",
-    type: "small",
-    cells: [
-      { id: "se-0", row: 1, col: 2, pos: "top" },
-      { id: "se-1", row: 2, col: 1, pos: "left" },
-      { id: "se-2", row: 2, col: 2, pos: "c", center: true },
-      { id: "se-3", row: 2, col: 3, pos: "right" },
-      { id: "se-4", row: 3, col: 2, pos: "bottom" }
-    ]
   }
 ];
 
 const LINE_DEFS = X_DEFS.flatMap((x) => {
-  const prefix = x.id;
   if (x.type === "super") {
     return [
-      { id: `${prefix}-vertical`, xId: x.id, name: "Long line", points: 100, cells: ["su-0", "su-1", "su-4", "su-7", "su-8"] },
-      { id: `${prefix}-horizontal`, xId: x.id, name: "Long line", points: 100, cells: ["su-2", "su-3", "su-4", "su-5", "su-6"] }
+      { id: `${x.id}-vertical`, xId: x.id, name: "Long", points: 50, cells: ["su-0", "su-1", "su-4", "su-7", "su-8"] },
+      { id: `${x.id}-horizontal`, xId: x.id, name: "Long", points: 50, cells: ["su-2", "su-3", "su-4", "su-5", "su-6"] }
     ];
   }
   const p = x.cells.map((cell) => cell.id);
   return [
-    { id: `${prefix}-vertical`, xId: x.id, name: "Short line", points: 50, cells: [p[0], p[2], p[4]] },
-    { id: `${prefix}-horizontal`, xId: x.id, name: "Short line", points: 50, cells: [p[1], p[2], p[3]] }
+    { id: `${x.id}-vertical`, xId: x.id, name: "Short", points: 25, cells: [p[0], p[2], p[4]] },
+    { id: `${x.id}-horizontal`, xId: x.id, name: "Short", points: 25, cells: [p[1], p[2], p[3]] }
   ];
 });
 
@@ -117,14 +84,6 @@ const BOARD_LAYOUT = {
       "inner-bottom": [8, 9],
       bottom: [8, 10]
     }
-  },
-  "south-west": {
-    label: { col: 3, row: 10 },
-    cells: { top: [4, 11], left: [3, 12], c: [4, 12], right: [5, 12], bottom: [4, 13] }
-  },
-  "south-east": {
-    label: { col: 11, row: 10 },
-    cells: { top: [12, 11], left: [11, 12], c: [12, 12], right: [13, 12], bottom: [12, 13] }
   }
 };
 
@@ -132,22 +91,19 @@ const state = {
   round: 1,
   scores: { red: 0, blue: 0 },
   displayedScores: { red: 0, blue: 0 },
-  turn: "red",
-  phase: "needDraw",
+  records: loadRecords(),
+  turn: "blue",
+  phase: "cpu",
   selectedTileId: null,
-  selectedActionId: null,
-  replaceTileId: null,
-  replaceUsesLeft: 0,
-  playsLeft: 3,
-  actionsLeft: 3,
-  pendingPlacements: [],
-  lastStartedEmptyX: null,
+  chain: 0,
   turnSnapshot: null,
-  bags: { red: [], blue: [] },
   racks: { red: [], blue: [] },
   board: {},
-  lockedLines: {},
-  log: []
+  lastEvent: "Welcome to Cross Locked Lite.",
+  bombChance: BASE_BOMB_CHANCE,
+  bomb: null,
+  scoringCross: null,
+  cpuTimer: null
 };
 
 const els = {
@@ -159,12 +115,11 @@ const els = {
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
   drawPlayBtn: document.querySelector("#drawPlayBtn"),
-  swapBtn: document.querySelector("#swapBtn"),
-  undoBtn: document.querySelector("#undoBtn"),
   endTurnBtn: document.querySelector("#endTurnBtn"),
   playsLeft: document.querySelector("#playsLeft"),
   actionsLeft: document.querySelector("#actionsLeft"),
-  log: document.querySelector("#log"),
+  highGame: document.querySelector("#highGame"),
+  largestMargin: document.querySelector("#largestMargin"),
   rulesDialog: document.querySelector("#rulesDialog"),
   rulesBtn: document.querySelector("#rulesBtn"),
   closeRulesBtn: document.querySelector("#closeRulesBtn")
@@ -172,6 +127,14 @@ const els = {
 
 function uid(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function randomRank() {
+  return RANKS[Math.floor(Math.random() * RANKS.length)];
+}
+
+function makeTile(color, rank = randomRank(), seeded = false) {
+  return { id: uid(color), type: "score", color, rank, seeded };
 }
 
 function shuffle(list) {
@@ -183,224 +146,156 @@ function shuffle(list) {
   return copy;
 }
 
-function makeBag(color) {
-  const tiles = [];
-  RANKS.forEach((rank) => {
-    for (let i = 0; i < 6; i += 1) tiles.push({ id: uid(color), type: "score", color, rank });
-  });
-  for (let i = 0; i < 4; i += 1) tiles.push({ id: uid(color), type: "score", color: "joker", rank: "Joker" });
-  Object.entries(ACTIONS).forEach(([kind, action]) => {
-    const half = Math.max(1, Math.floor(action.count / 2));
-    for (let i = 0; i < half; i += 1) tiles.push({ id: uid("action"), type: "action", kind });
-  });
-  return shuffle(tiles);
-}
-
-function setupRound() {
-  state.turn = "red";
-  state.phase = "needDraw";
-  state.selectedTileId = null;
-  state.selectedActionId = null;
-  state.replaceTileId = null;
-  state.replaceUsesLeft = 0;
-  state.playsLeft = 3;
-  state.actionsLeft = 3;
-  state.pendingPlacements = [];
-  state.lastStartedEmptyX = null;
-  state.turnSnapshot = null;
-  state.bags.red = makeBag("red");
-  state.bags.blue = makeBag("blue");
-  state.racks.red = [];
-  state.racks.blue = [];
-  state.board = {};
-  state.lockedLines = {};
-  X_DEFS.flatMap((x) => x.cells).forEach((cell) => {
-    state.board[cell.id] = null;
-  });
-  drawTiles("red", 15);
-  drawTiles("blue", 15);
-  addLog(`Round ${state.round} started. Red goes first.`);
-  render();
-}
-
-function drawTiles(color, count) {
-  for (let i = 0; i < count; i += 1) {
-    if (state.bags[color].length) state.racks[color].push(state.bags[color].pop());
+function loadRecords() {
+  try {
+    return JSON.parse(localStorage.getItem("crossLockedLiteRecords")) || { highGame: 0, largestMargin: 0 };
+  } catch {
+    return { highGame: 0, largestMargin: 0 };
   }
 }
 
-function addLog(message) {
-  state.log.unshift(message);
-  state.log = state.log.slice(0, 8);
+function saveRecords() {
+  localStorage.setItem("crossLockedLiteRecords", JSON.stringify(state.records));
 }
 
-function getCellDef(cellId) {
-  return X_DEFS.flatMap((x) => x.cells.map((cell) => ({ ...cell, xId: x.id, xType: x.type }))).find((cell) => cell.id === cellId);
+function setupRound() {
+  window.clearTimeout(state.cpuTimer);
+  state.selectedTileId = null;
+  state.chain = 0;
+  state.turnSnapshot = null;
+  state.bombChance = BASE_BOMB_CHANCE;
+  state.racks.red = [];
+  state.racks.blue = [];
+  state.board = {};
+  state.bomb = null;
+  state.scoringCross = null;
+  X_DEFS.flatMap((x) => x.cells).forEach((cell) => {
+    state.board[cell.id] = null;
+  });
+  seedCenters();
+  drawStartingRack("red");
+  drawStartingRack("blue");
+  state.turn = state.round === 2 ? "red" : "blue";
+  state.phase = state.turn === "red" ? "needDraw" : "cpu";
+  state.lastEvent = `Round ${state.round}: ${TEAM_LABEL[state.turn]} starts.`;
+  render();
+  if (state.turn === "blue") {
+    state.cpuTimer = window.setTimeout(runCpuTurn, 700);
+  }
+}
+
+function seedCenters() {
+  const smallCenters = shuffle(X_DEFS.filter((x) => x.type === "small").map((x) => x.cells.find((cell) => cell.center).id));
+  smallCenters.slice(0, 1).forEach((cellId) => {
+    state.board[cellId] = makeTile("red", randomRank(), true);
+  });
+  smallCenters.slice(1).forEach((cellId) => {
+    state.board[cellId] = makeTile("blue", randomRank(), true);
+  });
+  const superCenter = getXDef("super").cells.find((cell) => cell.center).id;
+  const superColor = state.round === 2 ? "blue" : "red";
+  state.board[superCenter] = makeTile(superColor, randomRank(), true);
+}
+
+function drawStartingRack(color) {
+  while (state.racks[color].length < 10) state.racks[color].push(makeTile(color));
 }
 
 function getXDef(xId) {
   return X_DEFS.find((x) => x.id === xId);
 }
 
+function getCellDef(cellId) {
+  return X_DEFS
+    .flatMap((x) => x.cells.map((cell) => ({ ...cell, xId: x.id, xType: x.type })))
+    .find((cell) => cell.id === cellId);
+}
+
 function getLinesForCell(cellId) {
   return LINE_DEFS.filter((line) => line.cells.includes(cellId));
-}
-
-function isCellLocked(cellId) {
-  return getLinesForCell(cellId).some((line) => state.lockedLines[line.id]);
-}
-
-function isXEmpty(xId) {
-  return getXDef(xId).cells.every((cell) => !state.board[cell.id]);
-}
-
-function isXFull(xId) {
-  return getXDef(xId).cells.every((cell) => state.board[cell.id]);
-}
-
-function tileColorForTeam(tile, team) {
-  return tile.color === team || tile.color === "joker";
 }
 
 function getLineTiles(line) {
   return line.cells.map((id) => state.board[id]).filter(Boolean);
 }
 
-function isLineFilled(line) {
+function isLineFull(line) {
   return line.cells.every((id) => state.board[id]);
 }
 
+function isXFull(x) {
+  return x.cells.every((cell) => state.board[cell.id]);
+}
+
+function isPattern(tiles, targetLength = tiles.length) {
+  if (tiles.length <= 1) return true;
+  const values = tiles.map((tile) => Number(tile.rank)).sort((a, b) => a - b);
+  if (values.every((value) => value === values[0])) return true;
+  const unique = [...new Set(values)];
+  if (unique.length !== values.length) return false;
+  return unique[unique.length - 1] - unique[0] + 1 === unique.length;
+}
+
 function lineQualifiesForTeam(line, team) {
-  if (!isLineFilled(line)) return false;
+  if (!isLineFull(line)) return false;
   const tiles = line.cells.map((id) => state.board[id]);
-  return tiles.every((tile) => tileColorForTeam(tile, team)) && isRankPattern(tiles);
+  return tiles.every((tile) => tile.color === team) && isPattern(tiles, line.cells.length);
 }
 
 function xQualifiesForTeam(x, team) {
-  if (!isXFull(x.id)) return false;
-  return x.cells.every((cell) => tileColorForTeam(state.board[cell.id], team))
-    && LINE_DEFS.filter((line) => line.xId === x.id).every((line) => isRankPattern(line.cells.map((id) => state.board[id])));
-}
-
-function isRankPattern(tiles) {
-  const realRanks = tiles.filter((tile) => tile.rank !== "Joker").map((tile) => tile.rank);
-  if (realRanks.length <= 1) return true;
-  if (realRanks.every((rank) => rank === realRanks[0])) return true;
-  const values = realRanks.map((rank) => RANK_VALUE[rank]).sort((a, b) => a - b);
-  const lowAce = realRanks.includes("A") ? realRanks.map((rank) => (rank === "A" ? 1 : RANK_VALUE[rank])).sort((a, b) => a - b) : null;
-  return canBeConsecutive(values, tiles.length) || (lowAce && canBeConsecutive(lowAce, tiles.length));
-}
-
-function canBeConsecutive(values, targetLength) {
-  const unique = [...new Set(values)];
-  if (unique.length !== values.length) return false;
-  const gaps = unique[unique.length - 1] - unique[0] + 1 - unique.length;
-  const jokers = targetLength - values.length;
-  return gaps <= jokers;
+  if (!isXFull(x)) return false;
+  if (!x.cells.every((cell) => state.board[cell.id].color === team)) return false;
+  return LINE_DEFS.filter((line) => line.xId === x.id).every((line) => isPattern(line.cells.map((id) => state.board[id]), line.cells.length));
 }
 
 function canPlaceTile(tile, cellId) {
   const cell = getCellDef(cellId);
-  if (!cell || state.board[cellId] || isCellLocked(cellId) || tile.type !== "score") return { ok: false, reason: "That space is not available." };
-  if (cell.center && tile.rank === "Joker") return { ok: false, reason: "Jokers cannot be placed in any center space." };
-  if (cell.xType === "super" && cell.center && ["A", "K", "2", "Joker"].includes(tile.rank)) {
-    return { ok: false, reason: "The Super X center cannot be A, K, 2, or Joker." };
-  }
-  if (isXEmpty(cell.xId) && !cell.center) return { ok: false, reason: "Start an empty X by playing its center first." };
-  if (state.lastStartedEmptyX && state.lastStartedEmptyX !== cell.xId) {
-    return { ok: false, reason: "Finish the newly opened X before playing elsewhere." };
-  }
-  const fit = placementFitsLine(tile, cellId);
-  if (!fit.ok) return fit;
-  return { ok: true };
-}
-
-function placementFitsLine(tile, cellId) {
-  const cell = getCellDef(cellId);
-  const openingEmptyX = isXEmpty(cell.xId);
+  if (!cell || state.board[cellId]) return { ok: false, reason: "That spot is already full." };
+  if (!tile || tile.type !== "score") return { ok: false, reason: "Pick a number tile first." };
+  const lines = getLinesForCell(cellId);
+  const connected = lines.some((line) => line.cells.some((id) => state.board[id]));
+  if (!connected) return { ok: false, reason: "Play next to an existing center pattern." };
   state.board[cellId] = tile;
-  const candidateLines = getLinesForCell(cellId);
-  const hasFit = candidateLines.some((line) => {
-    const tiles = line.cells.map((id) => state.board[id]).filter(Boolean);
-    if (openingEmptyX && cell.center && tiles.length === 1) return true;
+  const fits = lines.some((line) => {
+    const tiles = getLineTiles(line);
     if (tiles.length < 2) return false;
-    return isRankPattern(tiles);
+    return isPattern(tiles, line.cells.length);
   });
   state.board[cellId] = null;
-  return hasFit
-    ? { ok: true }
-    : { ok: false, reason: "Tiles placed next to each other must be a possible sequence or the same kind." };
+  return fits ? { ok: true } : { ok: false, reason: "That tile must match the center line: same number or a sequence." };
 }
 
 function selectRackTile(tileId) {
   if (state.turn !== "red" || state.phase !== "playing") return;
   const tile = state.racks.red.find((item) => item.id === tileId);
   if (!tile) return;
-  if (tile.type === "action") {
-    state.selectedActionId = tileId;
-    state.selectedTileId = null;
-    state.replaceTileId = null;
-    state.replaceUsesLeft = tile.kind.includes("replace") ? ACTIONS[tile.kind].limit : 0;
-    const action = ACTIONS[tile.kind];
-    if (tile.kind === "draw4") {
-      useDrawFour(tile);
-      return;
-    }
-    setStatus(`${action.label} selected. ${tile.kind.includes("replace") ? "Tap one of your matching scoring tiles, then an opponent board tile." : "Tap a line on the board."}`);
-  } else if (state.selectedActionId && getSelectedAction()?.kind.includes("replace")) {
-    state.replaceTileId = tileId;
-    setStatus(`${tile.rank} selected for replacement. Tap an opponent tile with the same rank.`);
-  } else {
-    state.selectedTileId = tileId;
-    state.selectedActionId = null;
-    state.replaceTileId = null;
-    setStatus(`Selected ${tile.rank}. Tap an open board space.`);
-  }
+  state.selectedTileId = tile.id;
+  setStatus(`Selected ${tile.rank}. Tap a highlighted board space.`);
   render();
-}
-
-function getSelectedAction() {
-  return state.racks.red.find((tile) => tile.id === state.selectedActionId);
-}
-
-function setStatus(message) {
-  els.statusText.textContent = message;
 }
 
 function placeSelectedTile(cellId) {
   if (state.turn !== "red" || state.phase !== "playing") return;
-  const action = getSelectedAction();
-  if (action?.kind === "lock" || action?.kind === "unlock") {
-    handleLockClick(cellId, action);
-    return;
-  }
-  if (action?.kind.includes("replace")) {
-    handleReplaceClick(cellId, action);
-    return;
-  }
   const tile = state.racks.red.find((item) => item.id === state.selectedTileId);
-  if (!tile) return;
-  if (state.playsLeft <= 0) {
-    setStatus("You have used all 3 scoring plays for this turn.");
-    return;
-  }
   const result = canPlaceTile(tile, cellId);
   if (!result.ok) {
     setStatus(result.reason);
     return;
   }
   const fromRect = document.querySelector(`[data-tile="${tile.id}"]`)?.getBoundingClientRect();
-  const cell = getCellDef(cellId);
-  const wasEmpty = isXEmpty(cell.xId);
-  state.board[cellId] = tile;
-  state.racks.red = state.racks.red.filter((item) => item.id !== tile.id);
-  state.pendingPlacements.push({ cellId, tile, xWasEmpty: wasEmpty, xId: cell.xId });
-  if (wasEmpty) state.lastStartedEmptyX = cell.xId;
-  state.playsLeft -= 1;
+  placeTile("red", tile, cellId);
   state.selectedTileId = null;
-  setStatus(`${tile.rank} placed. ${state.playsLeft} scoring plays left.`);
+  state.chain += 1;
+  state.phase = "placing";
+  state.turnSnapshot = createTurnSnapshot();
   render();
   animateTileToBoard(tile.id, fromRect);
+  window.setTimeout(() => resolvePostPlacement("red", cellId), 340);
+}
+
+function placeTile(color, tile, cellId) {
+  state.board[cellId] = tile;
+  state.racks[color] = state.racks[color].filter((item) => item.id !== tile.id);
 }
 
 function animateTileToBoard(tileId, fromRect) {
@@ -416,12 +311,10 @@ function animateTileToBoard(tileId, fromRect) {
   flyer.style.height = `${fromRect.height}px`;
   document.body.append(flyer);
   target.style.visibility = "hidden";
-  const scaleX = toRect.width / fromRect.width;
-  const scaleY = toRect.height / fromRect.height;
   const animation = flyer.animate(
     [
       { transform: "translate(0, 0) scale(1)", opacity: 0.98 },
-      { transform: `translate(${toRect.left - fromRect.left}px, ${toRect.top - fromRect.top}px) scale(${scaleX}, ${scaleY})`, opacity: 1 }
+      { transform: `translate(${toRect.left - fromRect.left}px, ${toRect.top - fromRect.top}px) scale(${toRect.width / fromRect.width}, ${toRect.height / fromRect.height})`, opacity: 1 }
     ],
     { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" }
   );
@@ -431,311 +324,383 @@ function animateTileToBoard(tileId, fromRect) {
   };
 }
 
-function handleLockClick(cellId, action) {
-  if (state.actionsLeft <= 0) return;
-  const candidateLines = getLinesForCell(cellId);
-  const target = candidateLines.find((line) => {
-    const completeForEither = lineQualifiesForTeam(line, "red") || lineQualifiesForTeam(line, "blue");
-    return action.kind === "lock" ? completeForEither && !state.lockedLines[line.id] : state.lockedLines[line.id];
-  });
-  if (!target) {
-    setStatus(action.kind === "lock" ? "Tap a completed, unlocked line to lock it." : "Tap a locked line to unlock it.");
+function animateCpuTileToBoard(tileId) {
+  const fromRect = els.blueScore.closest(".score-pill")?.getBoundingClientRect();
+  const target = document.querySelector(`.cell [data-tile="${tileId}"]`);
+  if (!fromRect || !target) return;
+  const toRect = target.getBoundingClientRect();
+  const flyer = target.cloneNode(true);
+  flyer.classList.add("tile-flyer", "cpu-flyer");
+  const startSize = Math.min(46, fromRect.height || 46);
+  flyer.style.left = `${fromRect.left + fromRect.width / 2 - startSize / 2}px`;
+  flyer.style.top = `${fromRect.top + fromRect.height / 2 - startSize / 2}px`;
+  flyer.style.width = `${startSize}px`;
+  flyer.style.height = `${startSize}px`;
+  document.body.append(flyer);
+  target.style.visibility = "hidden";
+  const animation = flyer.animate(
+    [
+      { transform: "translate(0, 0) scale(0.8)", opacity: 0 },
+      { transform: "translate(-18px, 12px) scale(1.08)", opacity: 1, offset: 0.22 },
+      {
+        transform: `translate(${toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2)}px, ${toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2)}px) scale(${toRect.width / startSize})`,
+        opacity: 1
+      }
+    ],
+    { duration: 420, easing: "cubic-bezier(.18,.82,.2,1)" }
+  );
+  animation.onfinish = () => {
+    flyer.remove();
+    target.style.visibility = "";
+    target.closest(".cell")?.classList.add("cpu-landed");
+    window.setTimeout(() => target.closest(".cell")?.classList.remove("cpu-landed"), 360);
+  };
+}
+
+function resolvePostPlacement(color, cellId) {
+  const x = getXDef(getCellDef(cellId).xId);
+  if (xQualifiesForTeam(x, color)) {
+    scoreAndResetCross(color, x, () => {
+      if (color === "red") {
+        waitForHumanFreshDraw();
+      } else {
+        resolveFreshDraw(color);
+        if (state.turn === "blue" && state.phase === "cpu") {
+          state.cpuTimer = window.setTimeout(cpuStep, 650);
+        }
+      }
+    });
     return;
   }
-  if (action.kind === "lock") {
-    const alreadyLockedInX = LINE_DEFS.some((line) => line.xId === target.xId && state.lockedLines[line.id]);
-    if (alreadyLockedInX) {
-      setStatus("Only one line can be locked within a single X.");
-      return;
-    }
-    state.lockedLines[target.id] = "red";
-    consumeAction(action);
-    addLog(`Red locked a ${target.name.toLowerCase()}.`);
-  } else {
-    delete state.lockedLines[target.id];
-    consumeAction(action);
-    addLog("Red unlocked a line.");
+  if (color === "red") {
+    waitForHumanFreshDraw();
+    return;
   }
+  resolveFreshDraw(color);
+}
+
+function waitForHumanFreshDraw() {
+  if (checkRoundEnd()) return;
+  state.phase = "needFreshDraw";
+  state.selectedTileId = null;
+  state.turnSnapshot = null;
+  state.lastEvent = "Press Draw to reveal your fresh tile.";
+  setStatus("Press Draw to get the tile or event you earned.");
   render();
 }
 
-function handleReplaceClick(cellId, action) {
-  if (state.actionsLeft <= 0) return;
-  if (!state.replaceTileId) {
-    setStatus("Choose a scoring tile from your rack before tapping the board tile.");
-    return;
-  }
-  const rackTile = state.racks.red.find((tile) => tile.id === state.replaceTileId);
-  const boardTile = state.board[cellId];
-  if (!rackTile || !boardTile || boardTile.color === "red" || isCellLocked(cellId)) {
-    setStatus("Tap an unlocked opponent tile to replace.");
-    return;
-  }
-  const canReplaceJoker = action.kind === "superReplace";
-  if (boardTile.rank === "Joker" && !canReplaceJoker) {
-    setStatus("Only Super Replace can replace a joker.");
-    return;
-  }
-  if (boardTile.rank !== "Joker" && rackTile.rank !== boardTile.rank) {
-    setStatus("Replacement tile must match the board tile rank.");
-    return;
-  }
-  if (boardTile.rank === "Joker" && !lineWouldAcceptJokerReplacement(cellId, rackTile)) {
-    setStatus("That tile does not fit the line pattern for replacing a joker.");
-    return;
-  }
-  state.board[cellId] = rackTile;
-  state.racks.red = state.racks.red.filter((tile) => tile.id !== rackTile.id);
-  if (boardTile.rank === "Joker") state.racks.red.push(boardTile);
-  else state.bags.blue.unshift(boardTile);
-  state.replaceUsesLeft -= 1;
-  addLog(`Red replaced ${boardTile.rank} with ${rackTile.rank}.`);
-  if (state.replaceUsesLeft <= 0) consumeAction(action);
-  state.replaceTileId = null;
+function scoreAndResetCross(color, x, next) {
+  const points = x.type === "super" ? 200 : 100;
+  state.phase = "scoring";
+  state.scoringCross = { xId: x.id, color, points };
+  state.scores[color] += points;
+  state.lastEvent = `${TEAM_LABEL[color]} completed a ${x.type === "super" ? "Big Cross" : "Small Cross"} for ${points}.`;
+  setStatus(`${TEAM_LABEL[color]} scores ${points}. The cross will reset.`);
   render();
+  window.setTimeout(() => {
+    clearCrossToFreshCenter(x, color);
+    state.scoringCross = null;
+    state.phase = color === "red" ? "playing" : "cpu";
+    render();
+    window.setTimeout(next, 180);
+  }, 980);
 }
 
-function lineWouldAcceptJokerReplacement(cellId, rackTile) {
-  return getLinesForCell(cellId).every((line) => {
-    const tiles = line.cells.map((id) => (id === cellId ? rackTile : state.board[id])).filter(Boolean);
-    return tiles.length < 2 || isRankPattern(tiles);
+function clearCrossToFreshCenter(x, color) {
+  const center = x.cells.find((cell) => cell.center);
+  x.cells.forEach((cell) => {
+    state.board[cell.id] = null;
   });
+  state.board[center.id] = makeTile(color, randomRank(), true);
 }
 
-function consumeAction(action) {
-  state.actionsLeft -= 1;
-  state.racks.red = state.racks.red.filter((tile) => tile.id !== action.id);
-  state.selectedActionId = null;
-  state.replaceTileId = null;
-  state.replaceUsesLeft = 0;
-  setStatus(`${ACTIONS[action.kind].label} used. ${state.actionsLeft} actions left.`);
-}
-
-function useDrawFour(action) {
-  if (state.actionsLeft <= 0) return;
-  drawTiles("red", 4);
-  consumeAction(action);
-  addLog("Red used Draw 4.");
-  render();
-}
-
-function validateTurnEnd() {
-  if (!state.lastStartedEmptyX) return { ok: true };
-  const opened = state.pendingPlacements.filter((move) => move.xId === state.lastStartedEmptyX);
-  if (opened.length < 2 || opened.length > 3) {
-    return { ok: false, reason: "Opening an empty X requires the center plus 1 or 2 more tiles." };
-  }
-  if (!opened.some((move) => getCellDef(move.cellId).center)) {
-    return { ok: false, reason: "Opening an empty X must include the center." };
-  }
-  const linesTouched = LINE_DEFS.filter((line) => line.xId === state.lastStartedEmptyX && opened.every((move) => line.cells.includes(move.cellId) || !getCellDef(move.cellId).center));
-  const anyPattern = linesTouched.some((line) => {
-    const tiles = line.cells.map((id) => state.board[id]).filter(Boolean);
-    return tiles.length >= opened.length && isRankPattern(tiles);
-  });
-  if (!anyPattern) return { ok: false, reason: "Opening tiles must form a like-kind or sequence line." };
-  return { ok: true };
-}
-
-function rollbackBadOpening() {
-  state.pendingPlacements.forEach((move) => {
-    state.board[move.cellId] = null;
-    state.racks.red.push(move.tile);
-    state.playsLeft += 1;
-  });
-  state.pendingPlacements = [];
-  state.lastStartedEmptyX = null;
-}
-
-function startHumanTurn(mode) {
+function startHumanTurn() {
   if (state.turn !== "red" || state.phase !== "needDraw") return;
-  drawTiles("red", 3);
-  state.phase = mode === "swap" ? "swap" : "playing";
-  state.playsLeft = 3;
-  state.actionsLeft = 3;
-  state.pendingPlacements = [];
-  state.lastStartedEmptyX = null;
-  if (mode === "swap") {
-    doSwap("red");
-    addLog("Red drew 3 and swapped triplicates.");
-    endHumanTurn(true);
-  } else {
-    state.turnSnapshot = createTurnSnapshot();
-    addLog("Red drew 3 tiles.");
-  }
+  const fromRect = els.drawPlayBtn.getBoundingClientRect();
+  state.phase = "playing";
+  state.chain = 0;
+  state.bombChance = BASE_BOMB_CHANCE;
+  const tile = makeTile("red");
+  state.racks.red.push(tile);
+  state.turnSnapshot = createTurnSnapshot();
+  state.lastEvent = `You drew a ${tile.rank}.`;
+  setStatus("Place one tile, or end your turn. Each placement earns a fresh draw.");
   render();
+  animateDrawToRack(tile, fromRect);
 }
 
 function createTurnSnapshot() {
   return {
     racks: structuredClone(state.racks),
-    bags: structuredClone(state.bags),
     board: structuredClone(state.board),
-    lockedLines: structuredClone(state.lockedLines),
-    playsLeft: state.playsLeft,
-    actionsLeft: state.actionsLeft
+    chain: state.chain
   };
 }
 
-function undoHumanTurn() {
-  if (state.turn !== "red" || state.phase !== "playing" || !state.turnSnapshot) return;
-  state.racks = structuredClone(state.turnSnapshot.racks);
-  state.bags = structuredClone(state.turnSnapshot.bags);
-  state.board = structuredClone(state.turnSnapshot.board);
-  state.lockedLines = structuredClone(state.turnSnapshot.lockedLines);
-  state.playsLeft = state.turnSnapshot.playsLeft;
-  state.actionsLeft = state.turnSnapshot.actionsLeft;
-  state.pendingPlacements = [];
-  state.lastStartedEmptyX = null;
+function endHumanTurn() {
+  if (state.turn !== "red" || !["playing", "needFreshDraw"].includes(state.phase)) return;
+  passTurnTo("blue", "You ended your turn.");
+}
+
+function passTurnTo(nextTeam, eventText) {
   state.selectedTileId = null;
-  state.selectedActionId = null;
-  state.replaceTileId = null;
-  state.replaceUsesLeft = 0;
-  setStatus("Turn reset. Your drawn tiles are still in your rack.");
-  addLog("Red undid this turn's plays.");
-  render();
-}
-
-function doSwap(color) {
-  const rack = state.racks[color];
-  const byRank = {};
-  rack.filter((tile) => tile.type === "score" && tile.rank !== "Joker").forEach((tile) => {
-    byRank[tile.rank] ||= [];
-    byRank[tile.rank].push(tile);
-  });
-  Object.values(byRank).forEach((group) => {
-    while (group.length >= 3) {
-      const removed = group.splice(0, 3);
-      state.racks[color] = state.racks[color].filter((tile) => !removed.includes(tile));
-      state.bags[color].unshift(...removed);
-      drawTiles(color, 3);
-    }
-  });
-  state.bags[color] = shuffle(state.bags[color]);
-}
-
-function endHumanTurn(skipValidation = false) {
-  if (state.turn !== "red") return;
-  if (!skipValidation) {
-    const valid = validateTurnEnd();
-    if (!valid.ok) {
-      setStatus(`${valid.reason} The opening play was returned to your rack.`);
-      rollbackBadOpening();
-      render();
-      return;
-    }
-  }
+  state.chain = 0;
+  state.turnSnapshot = null;
+  state.turn = nextTeam;
+  state.phase = nextTeam === "red" ? "needDraw" : "cpu";
+  state.bombChance = BASE_BOMB_CHANCE;
+  state.lastEvent = eventText;
   if (checkRoundEnd()) return;
-  state.turn = "blue";
-  state.phase = "cpu";
-  state.selectedTileId = null;
-  state.selectedActionId = null;
-  state.replaceTileId = null;
   render();
-  window.setTimeout(runCpuTurn, 600);
+  if (nextTeam === "blue") state.cpuTimer = window.setTimeout(runCpuTurn, 650);
+}
+
+function resolveFreshDraw(color) {
+  if (checkRoundEnd()) return;
+  const event = pickFreshEvent();
+  if (event === "number") {
+    const tile = makeTile(color);
+    const fromRect = color === "red" ? document.querySelector(".rack-turn-card")?.getBoundingClientRect() : null;
+    state.racks[color].push(tile);
+    const nextRisk = nextBombChance();
+    state.lastEvent = `${TEAM_LABEL[color]} drew a fresh ${tile.rank}. Bomb risk rises to ${nextRisk}%.`;
+    setStatus(color === "red" ? `Fresh tile added. Bomb risk is now ${nextRisk}%.` : state.lastEvent);
+    state.bombChance = nextRisk;
+    state.phase = color === "red" ? "drawing" : "cpu";
+    state.turnSnapshot = createTurnSnapshot();
+    render();
+    if (color === "red") {
+      animateDrawToRack(tile, fromRect);
+      window.setTimeout(() => {
+        if (state.turn === "red" && state.phase === "drawing") {
+          state.phase = "playing";
+          setStatus(`Fresh tile added. Bomb risk is now ${state.bombChance}%. Place another tile, or end your turn.`);
+          render();
+        }
+      }, 430);
+    }
+    return;
+  }
+  const bombColor = event === "redBomb" ? "red" : "blue";
+  showSpecialDraw(color, { kind: "bomb", color: bombColor, label: "BOMB", detail: TEAM_LABEL[bombColor] }, () => {
+    triggerBomb(color, bombColor);
+  });
+}
+
+function pickFreshEvent() {
+  const roll = Math.random() * 100;
+  if (roll >= state.bombChance) return "number";
+  return Math.random() < 0.5 ? "redBomb" : "blueBomb";
+}
+
+function nextBombChance() {
+  return Math.min(MAX_BOMB_CHANCE, state.bombChance + BOMB_CHANCE_STEP);
+}
+
+function pickBombTargets(color) {
+  const candidates = Object.entries(state.board)
+    .filter(([cellId, tile]) => tile?.color === color && !getCellDef(cellId).center);
+  const count = Math.min(candidates.length, Math.random() < 0.5 ? 1 : 2);
+  return shuffle(candidates).slice(0, count).map(([cellId]) => cellId);
+}
+
+function triggerBomb(drawColor, bombColor) {
+  const targets = pickBombTargets(bombColor);
+  const removed = targets.length;
+  state.phase = "bombing";
+  state.selectedTileId = null;
+  state.bombChance = BASE_BOMB_CHANCE;
+  state.bomb = {
+    color: bombColor,
+    cells: targets,
+    message: removed ? `${TEAM_LABEL[bombColor]} Bomb is clearing ${removed} tile${removed === 1 ? "" : "s"}.` : `${TEAM_LABEL[bombColor]} Bomb hit, but there were no loose ${bombColor} tiles to remove.`
+  };
+  state.lastEvent = `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb.`;
+  setStatus(state.bomb.message);
+  render();
+  window.requestAnimationFrame(() => {
+    targets.forEach((cellId) => createBombBurst(cellId, bombColor));
+  });
+  window.setTimeout(() => {
+    targets.forEach((cellId) => {
+      state.board[cellId] = null;
+    });
+  state.bomb = null;
+  state.scoringCross = null;
+  passTurnTo(otherTeam(drawColor), `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb. ${removed} ${bombColor} tile${removed === 1 ? "" : "s"} removed.`);
+  }, 900);
+}
+
+function bombTiles(color) {
+  const targets = pickBombTargets(color);
+  targets.forEach((cellId) => {
+    state.board[cellId] = null;
+  });
+  return targets.length;
+}
+
+function createBombBurst(cellId, color) {
+  const cell = document.querySelector(`[data-cell="${cellId}"]`);
+  if (!cell) return;
+  const rect = cell.getBoundingClientRect();
+  const burst = document.createElement("div");
+  burst.className = `bomb-burst ${color}`;
+  burst.style.left = `${rect.left + rect.width / 2}px`;
+  burst.style.top = `${rect.top + rect.height / 2}px`;
+  for (let i = 0; i < 10; i += 1) {
+    const spark = document.createElement("i");
+    const angle = (Math.PI * 2 * i) / 10;
+    const distance = 24 + Math.random() * 22;
+    spark.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
+    spark.style.setProperty("--r", `${Math.random() * 180 - 90}deg`);
+    burst.append(spark);
+  }
+  document.body.append(burst);
+  window.setTimeout(() => burst.remove(), 820);
+}
+
+function showSpecialDraw(drawColor, tile, onDone) {
+  state.phase = "drawing";
+  const source = drawColor === "red" ? els.drawPlayBtn : els.blueScore.closest(".score-pill");
+  const fromRect = source?.getBoundingClientRect();
+  const targetRect = document.querySelector(".rack-turn-card")?.getBoundingClientRect() || fromRect;
+  if (!fromRect || !targetRect) {
+    onDone();
+    return;
+  }
+  const el = document.createElement("div");
+  el.className = `special-draw-tile ${tile.kind} ${tile.color || ""}`;
+  el.innerHTML = `<strong>${tile.label}</strong><small>${tile.detail}</small>`;
+  const size = 70;
+  el.style.left = `${fromRect.left + fromRect.width / 2 - size / 2}px`;
+  el.style.top = `${fromRect.top + fromRect.height / 2 - size / 2}px`;
+  el.style.width = `${size}px`;
+  el.style.height = `${size}px`;
+  document.body.append(el);
+  setStatus(`${tile.detail} Bomb drawn.`);
+  const animation = el.animate(
+    [
+      { transform: "translate(0, 0) scale(0.72) rotate(-4deg)", opacity: 0 },
+      { transform: "translate(0, -16px) scale(1) rotate(2deg)", opacity: 1, offset: 0.24 },
+      {
+        transform: `translate(${targetRect.left + targetRect.width / 2 - (fromRect.left + fromRect.width / 2)}px, ${targetRect.top + targetRect.height / 2 - (fromRect.top + fromRect.height / 2)}px) scale(1.08) rotate(0deg)`,
+        opacity: 1
+      }
+    ],
+    { duration: 480, easing: "cubic-bezier(.18,.82,.2,1)" }
+  );
+  animation.onfinish = () => {
+    el.classList.add("special-revealed");
+    window.setTimeout(() => {
+      el.remove();
+      onDone();
+    }, 520);
+  };
+}
+
+function animateDrawToRack(tile, fromRect) {
+  if (!fromRect) return;
+  const target = document.querySelector(`.rack-slot[data-rank="${tile.rank}"]`);
+  if (!target) return;
+  const toRect = target.getBoundingClientRect();
+  const flyer = renderTile(tile, false);
+  flyer.classList.add("tile-flyer", "draw-flyer");
+  const startSize = Math.min(46, fromRect.height || 46);
+  flyer.style.left = `${fromRect.left + fromRect.width / 2 - startSize / 2}px`;
+  flyer.style.top = `${fromRect.top + fromRect.height / 2 - startSize / 2}px`;
+  flyer.style.width = `${startSize}px`;
+  flyer.style.height = `${startSize}px`;
+  document.body.append(flyer);
+  target.classList.add("rack-landing");
+  const animation = flyer.animate(
+    [
+      { transform: "translate(0, 0) scale(0.72)", opacity: 0 },
+      { transform: "translate(0, -18px) scale(1)", opacity: 1, offset: 0.2 },
+      {
+        transform: `translate(${toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2)}px, ${toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2)}px) scale(${toRect.width / startSize})`,
+        opacity: 1
+      }
+    ],
+    { duration: 430, easing: "cubic-bezier(.18,.82,.2,1)" }
+  );
+  animation.onfinish = () => {
+    flyer.remove();
+    target.classList.remove("rack-landing");
+    target.classList.add("rack-landed");
+    window.setTimeout(() => target.classList.remove("rack-landed"), 360);
+  };
+}
+
+function otherTeam(color) {
+  return color === "red" ? "blue" : "red";
 }
 
 function runCpuTurn() {
-  drawTiles("blue", 3);
-  state.playsLeft = 3;
-  state.actionsLeft = 3;
-  const draw4 = state.racks.blue.find((tile) => tile.type === "action" && tile.kind === "draw4");
-  if (draw4 && state.bags.blue.length > 12 && Math.random() > 0.45) {
-    state.racks.blue = state.racks.blue.filter((tile) => tile.id !== draw4.id);
-    drawTiles("blue", 4);
-    addLog("Blue CPU used Draw 4.");
-  }
-  cpuTryReplace();
-  for (let i = 0; i < 3; i += 1) {
-    if (!cpuPlaceBestTile()) break;
-  }
-  cpuTryLock();
-  addLog("Blue CPU ended its turn.");
-  if (checkRoundEnd()) return;
-  state.turn = "red";
-  state.phase = "needDraw";
-  state.playsLeft = 3;
-  state.actionsLeft = 3;
-  state.pendingPlacements = [];
-  state.lastStartedEmptyX = null;
+  if (state.phase !== "cpu" || state.turn !== "blue") return;
+  state.chain = 0;
+  const tile = makeTile("blue");
+  state.racks.blue.push(tile);
+  state.lastEvent = `Blue CPU drew a ${tile.rank}.`;
   render();
+  state.cpuTimer = window.setTimeout(cpuStep, 520);
 }
 
-function cpuPlaceBestTile() {
-  const scoringTiles = state.racks.blue.filter((tile) => tile.type === "score");
-  const openCells = Object.keys(state.board).filter((cellId) => !state.board[cellId] && !isCellLocked(cellId));
+function cpuStep() {
+  if (state.phase !== "cpu" || state.turn !== "blue") return;
+  const best = findBestPlacement("blue");
+  if (!best || (state.chain > 0 && Math.random() < 0.22)) {
+    passTurnTo("red", "Blue CPU ended its turn.");
+    return;
+  }
+  placeTile("blue", best.tile, best.cellId);
+  state.chain += 1;
+  state.lastEvent = `Blue CPU placed ${best.tile.rank}.`;
+  render();
+  animateCpuTileToBoard(best.tile.id);
+  state.cpuTimer = window.setTimeout(() => {
+    resolvePostPlacement("blue", best.cellId);
+    if (state.turn === "blue" && state.phase === "cpu") {
+      state.cpuTimer = window.setTimeout(cpuStep, 650);
+    }
+  }, 640);
+}
+
+function findBestPlacement(team) {
   let best = null;
-  scoringTiles.forEach((tile) => {
+  const openCells = Object.keys(state.board).filter((cellId) => !state.board[cellId]);
+  state.racks[team].forEach((tile) => {
     openCells.forEach((cellId) => {
-      const score = evaluatePlacement("blue", tile, cellId);
-      if (score > (best?.score ?? -1)) best = { tile, cellId, score };
+      const value = evaluatePlacement(team, tile, cellId);
+      if (value > (best?.value ?? -1)) best = { tile, cellId, value };
     });
   });
-  if (!best || best.score < 0) return false;
-  state.board[best.cellId] = best.tile;
-  state.racks.blue = state.racks.blue.filter((tile) => tile.id !== best.tile.id);
-  addLog(`Blue CPU placed ${best.tile.rank}.`);
-  return true;
+  return best?.value >= 0 ? best : null;
 }
 
 function evaluatePlacement(team, tile, cellId) {
-  const cell = getCellDef(cellId);
-  if (!cell || state.board[cellId] || isCellLocked(cellId)) return -1;
-  if (cell.center && tile.rank === "Joker") return -1;
-  if (cell.xType === "super" && cell.center && ["A", "K", "2", "Joker"].includes(tile.rank)) return -1;
-  if (isXEmpty(cell.xId) && !cell.center) return -1;
-  if (!placementFitsLine(tile, cellId).ok) return -1;
+  const result = canPlaceTile(tile, cellId);
+  if (!result.ok) return -1;
   state.board[cellId] = tile;
-  let score = cell.center ? 7 : 1;
+  const before = scoreRound()[team].total;
+  let value = before;
+  const cell = getCellDef(cellId);
+  value += cell.center ? 3 : 1;
   getLinesForCell(cellId).forEach((line) => {
     const tiles = getLineTiles(line);
-    if (tiles.every((lineTile) => tileColorForTeam(lineTile, team)) && isRankPattern(tiles)) score += tiles.length * 8;
-    if (lineQualifiesForTeam(line, team)) score += 120;
-    if (tiles.some((lineTile) => lineTile.color === "red") && tiles.some((lineTile) => lineTile.color === "blue")) score += 25;
+    if (tiles.every((item) => item.color === team) && isPattern(tiles, line.cells.length)) value += tiles.length * 4;
   });
-  if (xQualifiesForTeam(getXDef(cell.xId), team)) score += 320;
   state.board[cellId] = null;
-  return score;
-}
-
-function cpuTryReplace() {
-  const action = state.racks.blue.find((tile) => tile.type === "action" && tile.kind.includes("replace"));
-  if (!action) return;
-  const candidates = Object.entries(state.board).filter(([, tile]) => tile && tile.color === "red");
-  const rackScores = state.racks.blue.filter((tile) => tile.type === "score");
-  const target = candidates.find(([cellId, boardTile]) => !isCellLocked(cellId) && rackScores.some((tile) => tile.rank === boardTile.rank));
-  if (!target) return;
-  const [cellId, boardTile] = target;
-  const replacement = rackScores.find((tile) => tile.rank === boardTile.rank);
-  state.board[cellId] = replacement;
-  state.racks.blue = state.racks.blue.filter((tile) => tile.id !== replacement.id && tile.id !== action.id);
-  state.bags.red.unshift(boardTile);
-  addLog(`Blue CPU used ${ACTIONS[action.kind].label}.`);
-}
-
-function cpuTryLock() {
-  const lock = state.racks.blue.find((tile) => tile.type === "action" && tile.kind === "lock");
-  if (!lock) return;
-  const target = LINE_DEFS.find((line) => lineQualifiesForTeam(line, "blue") && !state.lockedLines[line.id] && !LINE_DEFS.some((other) => other.xId === line.xId && state.lockedLines[other.id]));
-  if (!target) return;
-  state.lockedLines[target.id] = "blue";
-  state.racks.blue = state.racks.blue.filter((tile) => tile.id !== lock.id);
-  addLog("Blue CPU locked a completed line.");
+  return value;
 }
 
 function checkRoundEnd() {
-  const boardFull = Object.values(state.board).every(Boolean);
-  const bagEmpty = !state.bags.red.length || !state.bags.blue.length;
-  if (!boardFull && !bagEmpty) return false;
+  if (!Object.values(state.board).every(Boolean)) return false;
   const roundScore = scoreRound();
   state.scores.red += roundScore.red.total;
   state.scores.blue += roundScore.blue.total;
-  addLog(`Round ${state.round} scored: Red ${roundScore.red.total}, Blue ${roundScore.blue.total}.`);
-  if (state.round >= 3) {
-    state.phase = "gameOver";
-    const winner = state.scores.red === state.scores.blue ? "Tie game" : state.scores.red > state.scores.blue ? "Red wins" : "Blue CPU wins";
-    setStatus(`${winner}. Final score Red ${state.scores.red}, Blue ${state.scores.blue}.`);
-    render();
+  if (state.round >= TOTAL_ROUNDS) {
+    finishGame();
     return true;
   }
   state.round += 1;
@@ -743,33 +708,34 @@ function checkRoundEnd() {
   return true;
 }
 
+function finishGame() {
+  const total = state.scores.red + state.scores.blue;
+  const margin = Math.abs(state.scores.red - state.scores.blue);
+  state.records.highGame = Math.max(state.records.highGame, total);
+  state.records.largestMargin = Math.max(state.records.largestMargin, margin);
+  saveRecords();
+  state.phase = "gameOver";
+  state.lastEvent = state.scores.red === state.scores.blue ? "Tie game." : state.scores.red > state.scores.blue ? "Red wins the game." : "Blue CPU wins the game.";
+  setStatus(`${state.lastEvent} High game ${state.records.highGame}. Largest margin ${state.records.largestMargin}.`);
+  render();
+}
+
 function scoreRound() {
   return { red: scoreTeam("red"), blue: scoreTeam("blue") };
 }
 
 function scoreTeam(team) {
-  const scoredCells = new Set();
   let total = 0;
+  const completedXs = new Set();
   X_DEFS.forEach((x) => {
     if (xQualifiesForTeam(x, team)) {
-      total += x.type === "super" ? 500 : 250;
-      x.cells.forEach((cell) => {
-        scoredCells.add(cell.id);
-        total += TILE_POINTS[state.board[cell.id].rank];
-      });
+      total += x.type === "super" ? 200 : 100;
+      completedXs.add(x.id);
     }
   });
   LINE_DEFS.forEach((line) => {
-    if (line.cells.every((cellId) => scoredCells.has(cellId))) return;
-    if (lineQualifiesForTeam(line, team)) {
-      total += line.points;
-      line.cells.forEach((cellId) => {
-        if (!scoredCells.has(cellId)) {
-          scoredCells.add(cellId);
-          total += TILE_POINTS[state.board[cellId].rank];
-        }
-      });
-    }
+    if (completedXs.has(line.xId)) return;
+    if (lineQualifiesForTeam(line, team)) total += line.points;
   });
   return { total };
 }
@@ -782,11 +748,13 @@ function render() {
 
 function renderBoard() {
   els.board.innerHTML = "";
+  els.board.classList.toggle("bomb-active", Boolean(state.bomb));
+  els.board.classList.toggle("bomb-red", state.bomb?.color === "red");
+  els.board.classList.toggle("bomb-blue", state.bomb?.color === "blue");
   X_DEFS.forEach((x) => {
     const layout = BOARD_LAYOUT[x.id];
     const title = document.createElement("span");
     title.className = "board-label";
-    title.dataset.x = x.id;
     title.textContent = x.name;
     title.style.gridColumn = String(layout.label.col);
     title.style.gridRow = String(layout.label.row);
@@ -800,10 +768,26 @@ function renderBoard() {
       cellEl.dataset.cell = cell.id;
       cellEl.dataset.x = x.id;
       cellEl.setAttribute("aria-label", `${x.name} ${cell.pos}`);
-      if (isCellLocked(cell.id)) cellEl.classList.add("locked");
-      if (!state.board[cell.id] && state.turn === "red" && state.phase === "playing") cellEl.classList.add("selectable");
       const tile = state.board[cell.id];
-      if (tile) cellEl.append(renderTile(tile, false));
+      const isScoringCell = state.scoringCross?.xId === x.id;
+      if (isScoringCell) {
+        cellEl.classList.add("cross-scoring", state.scoringCross.color);
+      }
+      if (!tile && state.turn === "red" && state.phase === "playing") {
+        const selected = state.racks.red.find((item) => item.id === state.selectedTileId);
+        if (selected && canPlaceTile(selected, cell.id).ok) cellEl.classList.add("selectable");
+      }
+      if (tile) {
+        cellEl.classList.add(tile.seeded ? "seeded" : "filled");
+        cellEl.classList.toggle("bomb-target", Boolean(state.bomb?.cells.includes(cell.id)));
+        cellEl.append(renderTile(tile, false));
+      }
+      if (isScoringCell && cell.center) {
+        const points = document.createElement("span");
+        points.className = "cross-points";
+        points.textContent = `+${state.scoringCross.points}`;
+        cellEl.append(points);
+      }
       cellEl.addEventListener("click", () => placeSelectedTile(cell.id));
       els.board.append(cellEl);
     });
@@ -812,105 +796,114 @@ function renderBoard() {
 
 function renderRack() {
   els.rack.innerHTML = "";
-  const groups = [
-    {
-      label: "Scoring",
-      keys: [...RANKS, "Joker"],
-      getTiles: (key) => state.racks.red.filter((tile) => tile.type === "score" && tile.rank === key),
-      emptyTile: (key) => ({ id: `empty-score-${key}`, type: "score", color: key === "Joker" ? "joker" : "red", rank: key })
-    },
-    {
-      label: "Actions",
-      keys: Object.keys(ACTIONS),
-      getTiles: (key) => state.racks.red.filter((tile) => tile.type === "action" && tile.kind === key),
-      emptyTile: (key) => ({ id: `empty-action-${key}`, type: "action", kind: key })
-    }
-  ];
-  groups.forEach((group) => {
-    const groupEl = document.createElement("div");
-    groupEl.className = "rack-group";
-    const labelEl = document.createElement("span");
-    labelEl.className = "rack-label";
-    labelEl.textContent = group.label;
-    const tilesEl = document.createElement("div");
-    tilesEl.className = "rack-tiles";
-    group.keys.forEach((key) => {
-      const matchingTiles = group.getTiles(key);
-      const tile = matchingTiles[0] || group.emptyTile(key);
-      const tileEl = renderTile(tile, Boolean(matchingTiles.length));
-      tileEl.classList.add("rack-slot");
-      tileEl.classList.toggle("empty", !matchingTiles.length);
-      tileEl.classList.toggle("stacked", matchingTiles.length > 1);
-      tileEl.dataset.count = String(matchingTiles.length);
-      tileEl.classList.toggle("selected", matchingTiles.some((item) => item.id === state.selectedTileId || item.id === state.selectedActionId || item.id === state.replaceTileId));
-      tileEl.setAttribute("aria-label", `${group.label} ${tile.type === "action" ? ACTIONS[tile.kind].label : tile.rank}: ${matchingTiles.length}`);
-      if (matchingTiles.length) {
-        tileEl.addEventListener("click", () => selectRackTile(tile.id));
-      }
-      tilesEl.append(tileEl);
-    });
-    groupEl.append(labelEl, tilesEl);
-    els.rack.append(groupEl);
+  const groupEl = document.createElement("div");
+  groupEl.className = "rack-group";
+  const labelEl = document.createElement("span");
+  labelEl.className = "rack-label";
+  labelEl.textContent = "Red Tiles";
+  const tilesEl = document.createElement("div");
+  tilesEl.className = "rack-tiles lite-rack";
+  RANKS.forEach((rank) => {
+    const matchingTiles = state.racks.red.filter((tile) => tile.rank === rank);
+    const tile = matchingTiles[0] || { id: `empty-score-${rank}`, type: "score", color: "red", rank };
+    const tileEl = renderTile(tile, Boolean(matchingTiles.length));
+    tileEl.classList.add("rack-slot");
+    tileEl.classList.toggle("empty", !matchingTiles.length);
+    tileEl.classList.toggle("stacked", matchingTiles.length > 1);
+    tileEl.dataset.count = String(Math.min(matchingTiles.length, 6));
+    tileEl.dataset.rank = rank;
+    tileEl.classList.toggle("selected", matchingTiles.some((item) => item.id === state.selectedTileId));
+    tileEl.setAttribute("aria-label", `Red ${rank}: ${matchingTiles.length}`);
+    if (matchingTiles.length) tileEl.addEventListener("click", () => selectRackTile(tile.id));
+    tilesEl.append(tileEl);
   });
+  groupEl.append(labelEl, tilesEl);
+  els.rack.append(groupEl);
 }
 
 function renderTile(tile, asButton) {
   const el = document.createElement(asButton ? "button" : "div");
-  const tileClass = tile.type === "action" ? "yellow" : tile.color;
-  el.className = `tile ${tileClass}`;
+  el.className = `tile ${tile.color}`;
   el.dataset.tile = tile.id;
-  if (tile.type === "action") {
-    el.innerHTML = `${ACTIONS[tile.kind].label}<small>Action</small>`;
-  } else {
-    el.innerHTML = `${tile.rank}<small>${tile.color === "joker" ? "Wild" : tile.color}</small>`;
-  }
+  el.innerHTML = `${tile.rank}<small>${tile.color}</small>`;
   return el;
 }
 
 function renderHud() {
-  const liveRoundScore = state.phase === "gameOver" ? { red: { total: 0 }, blue: { total: 0 } } : scoreRound();
-  const displayedRed = state.scores.red + liveRoundScore.red.total;
-  const displayedBlue = state.scores.blue + liveRoundScore.blue.total;
-  updateScoreBox(els.redScore, "red", displayedRed);
-  updateScoreBox(els.blueScore, "blue", displayedBlue);
-  els.roundLabel.textContent = `${state.round}/3`;
-  els.playsLeft.textContent = state.phase === "playing" ? state.playsLeft : 3;
-  els.actionsLeft.textContent = state.phase === "playing" ? state.actionsLeft : 3;
+  const liveRoundScore = state.phase === "gameOver" || state.phase === "scoring" ? { red: { total: 0 }, blue: { total: 0 } } : scoreRound();
+  updateScoreBox(els.redScore, "red", state.scores.red + liveRoundScore.red.total);
+  updateScoreBox(els.blueScore, "blue", state.scores.blue + liveRoundScore.blue.total);
+  els.roundLabel.textContent = `${state.round}/${TOTAL_ROUNDS}`;
+  els.playsLeft.textContent = String(state.racks.red.length);
+  els.actionsLeft.textContent = String(state.chain);
+  els.highGame.textContent = String(state.records.highGame);
+  els.largestMargin.textContent = String(state.records.largestMargin);
   els.turnTitle.textContent = getTurnTitle();
-  document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && state.phase === "needDraw");
-  els.drawPlayBtn.disabled = state.turn !== "red" || state.phase !== "needDraw";
-  if (els.swapBtn) els.swapBtn.disabled = state.turn !== "red" || state.phase !== "needDraw";
-  els.undoBtn.disabled = state.turn !== "red" || state.phase !== "playing";
-  els.endTurnBtn.disabled = state.turn !== "red" || state.phase !== "playing";
-  if (state.phase === "needDraw") setStatus("Draw 3 tiles, then play up to 3 scoring tiles and up to 3 action tiles.");
-  if (state.phase === "cpu") setStatus("Blue CPU is thinking.");
-  if (els.log) els.log.innerHTML = state.log.map((entry) => `<p>${entry}</p>`).join("");
+  els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
+  els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || !["needDraw", "needFreshDraw"].includes(state.phase));
+  els.endTurnBtn.disabled = state.turn !== "red" || !["playing", "needFreshDraw"].includes(state.phase);
+  document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && ["needDraw", "needFreshDraw"].includes(state.phase));
+  if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red number tile.");
+  if (state.phase === "needFreshDraw") setStatus("Tap Draw to reveal the fresh tile or event.");
+  if (state.phase === "drawing") setStatus("Drawing...");
+  if (state.phase === "placing") setStatus("Tile placed. Get ready to draw.");
+  if (state.phase === "cpu") setStatus("Blue CPU is taking its turn.");
+  if (state.phase === "bombing") setStatus(state.bomb?.message || "Bomb is resolving.");
+  if (state.phase === "scoring" && state.scoringCross) setStatus(`${TEAM_LABEL[state.scoringCross.color]} scores ${state.scoringCross.points}. Resetting that cross.`);
 }
 
 function updateScoreBox(el, team, value) {
-  if (Number(el.textContent) !== value) {
+  const previous = Number(el.textContent);
+  if (previous !== value) {
     el.textContent = value;
     if (value > state.displayedScores[team]) {
-      el.closest(".score-pill").classList.remove("score-pop");
+      const delta = value - previous;
+      const pill = el.closest(".score-pill");
+      pill.classList.remove("score-pop");
       void el.offsetWidth;
-      el.closest(".score-pill").classList.add("score-pop");
+      pill.classList.add("score-pop");
+      animateScoreDelta(pill, delta, team);
     }
     state.displayedScores[team] = value;
   }
 }
 
-function getTurnTitle() {
-  if (state.phase === "gameOver") return "Game over";
-  if (state.turn === "blue") return "Blue CPU turn";
-  if (state.phase === "needDraw") return "Red: draw to start";
-  if (state.phase === "swap") return "Red: swapping";
-  return "Red: play tiles";
+function animateScoreDelta(pill, delta, team) {
+  if (!pill || delta <= 0) return;
+  pill.querySelectorAll(".score-delta").forEach((node) => node.remove());
+  const bubble = document.createElement("span");
+  bubble.className = `score-delta ${team}`;
+  bubble.textContent = `+${delta}`;
+  pill.append(bubble);
+  window.setTimeout(() => bubble.remove(), 760);
 }
 
-els.drawPlayBtn.addEventListener("click", () => startHumanTurn("play"));
-els.swapBtn?.addEventListener("click", () => startHumanTurn("swap"));
-els.undoBtn.addEventListener("click", undoHumanTurn);
-els.endTurnBtn.addEventListener("click", () => endHumanTurn(false));
+function getTurnTitle() {
+  if (state.phase === "gameOver") return "Game over";
+  if (state.turn === "blue") return "Blue CPU";
+  if (state.phase === "needDraw") return "Your turn";
+  if (state.phase === "needFreshDraw") return "Draw earned";
+  if (state.phase === "drawing") return "Drawing";
+  if (state.phase === "placing") return "Tile placed";
+  return "Place or end";
+}
+
+function setStatus(message) {
+  els.statusText.textContent = `${message} ${state.lastEvent ? `(${state.lastEvent})` : ""}`;
+}
+
+els.drawPlayBtn.addEventListener("click", () => {
+  if (state.phase === "gameOver") {
+    state.round = 1;
+    state.scores = { red: 0, blue: 0 };
+    state.displayedScores = { red: 0, blue: 0 };
+    setupRound();
+  } else {
+    if (state.phase === "needFreshDraw") resolveFreshDraw("red");
+    else startHumanTurn();
+  }
+});
+els.endTurnBtn.addEventListener("click", endHumanTurn);
 els.rulesBtn.addEventListener("click", () => els.rulesDialog.showModal());
 els.closeRulesBtn.addEventListener("click", () => els.rulesDialog.close());
 

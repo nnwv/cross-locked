@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f5f5f7">
-    <title>Cross Locked MVP</title>
+    <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -19,7 +19,7 @@
             </div>
             <div class="round-pill">
               <span>Round</span>
-              <strong id="roundLabel">1/3</strong>
+              <strong id="roundLabel">1/2</strong>
             </div>
             <div class="score-pill blue">
               <span>Blue CPU</span>
@@ -34,7 +34,7 @@
             <div class="rack-head">
               <div>
                 <p class="kicker">Rack</p>
-                <h2>Your Tiles</h2>
+                <h2>Cross Locked Lite</h2>
               </div>
               <button id="rulesBtn" class="icon-button" aria-label="Show rules">?</button>
             </div>
@@ -42,22 +42,25 @@
             <section class="turn-card rack-turn-card">
               <div>
                 <p class="kicker">Current Turn</p>
-                <h2 id="turnTitle">Red: draw to start</h2>
+                <h2 id="turnTitle">Your turn</h2>
               </div>
-              <p id="statusText" class="status-text">Draw 3 tiles, then play up to 3 scoring tiles and up to 3 action tiles.</p>
+              <p id="statusText" class="status-text">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</p>
               <div class="turn-counters" aria-label="Turn counters">
                 <div>
-                  <span>Plays</span>
-                  <strong id="playsLeft">3</strong>
+                  <span>Rack</span>
+                  <strong id="playsLeft">10</strong>
                 </div>
                 <div>
-                  <span>Actions</span>
-                  <strong id="actionsLeft">3</strong>
+                  <span>Streak</span>
+                  <strong id="actionsLeft">0</strong>
                 </div>
+              </div>
+              <div class="record-strip" aria-label="Score records">
+                <span>High Game <strong id="highGame">0</strong></span>
+                <span>Largest Margin <strong id="largestMargin">0</strong></span>
               </div>
               <div class="turn-actions">
                 <button id="drawPlayBtn" class="primary">Draw</button>
-                <button id="undoBtn" disabled>Undo</button>
                 <button id="endTurnBtn" disabled>End Turn</button>
               </div>
             </section>
@@ -68,16 +71,15 @@
 
     <dialog id="rulesDialog">
       <div class="dialog-head">
-        <h2>Rules in this MVP</h2>
+        <h2>Cross Locked Lite Rules</h2>
         <button id="closeRulesBtn" class="icon-button" aria-label="Close rules">x</button>
       </div>
       <ul>
-        <li>Complete lines and Xs using only your color plus jokers.</li>
-        <li>Small Xs use two 3-tile lines. The center Super X uses two 5-tile lines.</li>
-        <li>To start an empty X, your turn must place its center plus 1 or 2 matching tiles in that same X.</li>
-        <li>Jokers cannot go in any center. A, K, 2, and Joker cannot go in the Super X center.</li>
-        <li>Lock protects one completed line in an X. Unlock opens a locked line.</li>
-        <li>Replace actions trade an opponent tile for your matching tile. Super Replace can take a joker.</li>
+        <li>Red only plays red 1-5 tiles. Blue CPU only plays blue 1-5 tiles.</li>
+        <li>Each round starts with random center tiles. Round 1 starts with Blue CPU; round 2 starts with Red.</li>
+        <li>Tiles must fit a center line as matching numbers or a sequence.</li>
+        <li>After every placed tile, press Draw to reveal a number tile, Red Bomb, or Blue Bomb.</li>
+        <li>Short lines score 25. Long lines score 50. A full small cross scores 100 and a full big cross scores 200, with no extra line points for that cross.</li>
       </ul>
     </dialog>
 
