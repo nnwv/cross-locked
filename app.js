@@ -117,10 +117,6 @@ const els = {
   statusText: document.querySelector("#statusText"),
   drawPlayBtn: document.querySelector("#drawPlayBtn"),
   endTurnBtn: document.querySelector("#endTurnBtn"),
-  playsLeft: document.querySelector("#playsLeft"),
-  actionsLeft: document.querySelector("#actionsLeft"),
-  highGame: document.querySelector("#highGame"),
-  largestMargin: document.querySelector("#largestMargin"),
   rulesDialog: document.querySelector("#rulesDialog"),
   rulesBtn: document.querySelector("#rulesBtn"),
   closeRulesBtn: document.querySelector("#closeRulesBtn")
@@ -793,7 +789,7 @@ function finishGame() {
   saveRecords();
   state.phase = "gameOver";
   state.lastEvent = state.scores.red === state.scores.blue ? "Tie game." : state.scores.red > state.scores.blue ? "Red wins the game." : "Blue CPU wins the game.";
-  setStatus(`${state.lastEvent} High game ${state.records.highGame}. Largest margin ${state.records.largestMargin}.`);
+  setStatus(state.lastEvent);
   render();
 }
 
@@ -910,11 +906,9 @@ function renderHud() {
   const liveRoundScore = state.phase === "gameOver" || state.phase === "scoring" ? { red: { total: 0 }, blue: { total: 0 } } : scoreRound();
   updateScoreBox(els.redScore, "red", state.scores.red + liveRoundScore.red.total);
   updateScoreBox(els.blueScore, "blue", state.scores.blue + liveRoundScore.blue.total);
+  els.redScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "red" && state.phase !== "gameOver");
+  els.blueScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "blue" && state.phase !== "gameOver");
   els.roundLabel.textContent = `${state.round}/${TOTAL_ROUNDS}`;
-  els.playsLeft.textContent = String(state.racks.red.length);
-  els.actionsLeft.textContent = String(state.chain);
-  els.highGame.textContent = String(state.records.highGame);
-  els.largestMargin.textContent = String(state.records.largestMargin);
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
