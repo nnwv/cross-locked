@@ -361,32 +361,14 @@ function resolvePostPlacement(color, cellId) {
   const x = getXDef(getCellDef(cellId).xId);
   if (xQualifiesForTeam(x, color)) {
     scoreAndResetCross(color, x, () => {
-      if (color === "red") {
-        waitForHumanFreshDraw();
-      } else {
-        resolveFreshDraw(color);
-        if (state.turn === "blue" && state.phase === "cpu") {
-          state.cpuTimer = window.setTimeout(cpuStep, 650);
-        }
+      resolveFreshDraw(color);
+      if (color === "blue" && state.turn === "blue" && state.phase === "cpu") {
+        state.cpuTimer = window.setTimeout(cpuStep, 650);
       }
     });
     return;
   }
-  if (color === "red") {
-    waitForHumanFreshDraw();
-    return;
-  }
   resolveFreshDraw(color);
-}
-
-function waitForHumanFreshDraw() {
-  if (checkRoundEnd()) return;
-  state.phase = "needFreshDraw";
-  state.selectedTileId = null;
-  state.turnSnapshot = null;
-  state.lastEvent = "Press Draw to reveal your fresh tile.";
-  setStatus("Press Draw to get the tile or event you earned.");
-  render();
 }
 
 function scoreAndResetCross(color, x, next) {
@@ -438,7 +420,7 @@ function createTurnSnapshot() {
 }
 
 function endHumanTurn() {
-  if (state.turn !== "red" || !["playing", "needFreshDraw"].includes(state.phase)) return;
+  if (state.turn !== "red" || state.phase !== "playing") return;
   passTurnTo("blue", "You ended your turn.");
 }
 
@@ -840,13 +822,12 @@ function renderHud() {
   els.largestMargin.textContent = String(state.records.largestMargin);
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
-  els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || !["needDraw", "needFreshDraw"].includes(state.phase));
-  els.endTurnBtn.disabled = state.turn !== "red" || !["playing", "needFreshDraw"].includes(state.phase);
-  document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && ["needDraw", "needFreshDraw"].includes(state.phase));
+  els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
+  els.endTurnBtn.disabled = state.turn !== "red" || state.phase !== "playing";
+  document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && state.phase === "needDraw");
   if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red number tile.");
-  if (state.phase === "needFreshDraw") setStatus("Tap Draw to reveal the fresh tile or event.");
   if (state.phase === "drawing") setStatus("Drawing...");
-  if (state.phase === "placing") setStatus("Tile placed. Get ready to draw.");
+  if (state.phase === "placing") setStatus("Tile placed. Drawing automatically.");
   if (state.phase === "cpu") setStatus("Blue CPU is taking its turn.");
   if (state.phase === "bombing") setStatus(state.bomb?.message || "Bomb is resolving.");
   if (state.phase === "scoring" && state.scoringCross) setStatus(`${TEAM_LABEL[state.scoringCross.color]} scores ${state.scoringCross.points}. Resetting that cross.`);
@@ -882,7 +863,6 @@ function getTurnTitle() {
   if (state.phase === "gameOver") return "Game over";
   if (state.turn === "blue") return "Blue CPU";
   if (state.phase === "needDraw") return "Your turn";
-  if (state.phase === "needFreshDraw") return "Draw earned";
   if (state.phase === "drawing") return "Drawing";
   if (state.phase === "placing") return "Tile placed";
   return "Place or end";
@@ -899,8 +879,7 @@ els.drawPlayBtn.addEventListener("click", () => {
     state.displayedScores = { red: 0, blue: 0 };
     setupRound();
   } else {
-    if (state.phase === "needFreshDraw") resolveFreshDraw("red");
-    else startHumanTurn();
+    startHumanTurn();
   }
 });
 els.endTurnBtn.addEventListener("click", endHumanTurn);
