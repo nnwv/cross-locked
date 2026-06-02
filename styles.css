@@ -926,6 +926,18 @@ h2 {
   background: linear-gradient(180deg, #3f8fe4, #1556a0);
 }
 
+.tile.wild {
+  color: #1d1d1f;
+  border-color: rgba(0, 0, 0, 0.18);
+  background:
+    linear-gradient(135deg, rgba(239, 90, 99, 0.96) 0 38%, #ffffff 38% 62%, rgba(63, 143, 228, 0.96) 62% 100%);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.tile.wild small {
+  color: rgba(29, 29, 31, 0.74);
+}
+
 .tile.yellow {
   color: #332600;
   background: linear-gradient(180deg, #ffe070, #e0a524);
@@ -1085,14 +1097,21 @@ h2 {
 }
 
 .rack-tiles.lite-rack {
-  grid-template-columns: repeat(5, var(--tile-size));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   justify-content: start;
-  gap: clamp(7px, 1.1vw, 12px);
+  gap: clamp(5px, 0.9vw, 10px);
+  width: min(100%, calc((var(--tile-size) * 6) + 50px));
   padding: 6px 2px 7px;
 }
 
 .rack-tiles .tile {
   width: 100%;
+}
+
+.rack-tiles.lite-rack .tile {
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
 }
 
 .tile-flyer {
@@ -1242,8 +1261,8 @@ h2 {
 }
 
 .rack-group:last-child .rack-tiles.lite-rack {
-  grid-template-columns: repeat(5, var(--tile-size));
-  gap: 12px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(5px, 0.9vw, 10px);
 }
 
 .rack-slot {
@@ -1267,6 +1286,7 @@ h2 {
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: inherit;
   background: inherit;
+  box-shadow: inherit;
   pointer-events: none;
 }
 

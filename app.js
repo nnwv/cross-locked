@@ -3,6 +3,7 @@ const TOTAL_ROUNDS = 2;
 const BASE_BOMB_CHANCE = 8;
 const BOMB_CHANCE_STEP = 4;
 const MAX_BOMB_CHANCE = 28;
+const WILD_DRAW_CHANCE = 12;
 const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
 
 const X_DEFS = [
@@ -134,6 +135,18 @@ function makeTile(color, rank = randomRank(), seeded = false) {
   return { id: uid(color), type: "score", color, rank, seeded };
 }
 
+function makeWildTile(color) {
+  return { id: uid(`${color}-wild`), type: "wild", color, rank: "W", seeded: false };
+}
+
+function drawRackTile(color, allowWild = true) {
+  return allowWild && Math.random() * 100 < WILD_DRAW_CHANCE ? makeWildTile(color) : makeTile(color);
+}
+
+function describeTile(tile) {
+  return tile.type === "wild" ? "a Wild" : `a ${tile.rank}`;
+}
+
 function shuffle(list) {
   const copy = [...list];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -202,11 +215,14 @@ function seedCenters() {
 
 function drawStartingRack(color) {
   const deals = [];
+  state.racks[color].push(makeWildTile(color));
+  deals.push(state.racks[color][0]);
   while (state.racks[color].length < 10) {
     const tile = makeTile(color);
     state.racks[color].push(tile);
     deals.push(tile);
   }
+  state.racks[color] = shuffle(state.racks[color]);
   return deals;
 }
 
@@ -238,11 +254,14 @@ function isXFull(x) {
 
 function isPattern(tiles, targetLength = tiles.length) {
   if (tiles.length <= 1) return true;
-  const values = tiles.map((tile) => Number(tile.rank)).sort((a, b) => a - b);
+  const values = tiles.filter((tile) => tile.type !== "wild").map((tile) => Number(tile.rank)).sort((a, b) => a - b);
+  const wildCount = tiles.length - values.length;
+  if (!values.length) return true;
   if (values.every((value) => value === values[0])) return true;
   const unique = [...new Set(values)];
   if (unique.length !== values.length) return false;
-  return unique[unique.length - 1] - unique[0] + 1 === unique.length;
+  const gaps = unique[unique.length - 1] - unique[0] + 1 - unique.length;
+  return gaps <= wildCount && unique[unique.length - 1] - unique[0] + 1 <= targetLength;
 }
 
 function getAdjacentOccupiedTiles(cellId) {
@@ -256,6 +275,7 @@ function getAdjacentOccupiedTiles(cellId) {
 }
 
 function canTouch(tile, neighbor) {
+  if (tile.type === "wild" || neighbor.type === "wild") return true;
   const distance = Math.abs(Number(tile.rank) - Number(neighbor.rank));
   return distance === 0 || distance === 1;
 }
@@ -275,10 +295,11 @@ function xQualifiesForTeam(x, team) {
 function canPlaceTile(tile, cellId) {
   const cell = getCellDef(cellId);
   if (!cell || state.board[cellId]) return { ok: false, reason: "That spot is already full." };
-  if (!tile || tile.type !== "score") return { ok: false, reason: "Pick a number tile first." };
+  if (!tile || !["score", "wild"].includes(tile.type)) return { ok: false, reason: "Pick a tile first." };
   const lines = getLinesForCell(cellId);
   const neighbors = getAdjacentOccupiedTiles(cellId);
   if (!neighbors.length) return { ok: false, reason: "Place your tile directly next to an existing tile." };
+  if (tile.type === "wild") return { ok: true };
   if (!neighbors.every((neighbor) => canTouch(tile, neighbor))) {
     return { ok: false, reason: "Tiles can only touch the same number, or the next number up or down." };
   }
@@ -297,7 +318,7 @@ function selectRackTile(tileId) {
   const tile = state.racks.red.find((item) => item.id === tileId);
   if (!tile) return;
   state.selectedTileId = tile.id;
-  setStatus(`Selected ${tile.rank}. Tap a highlighted board space.`);
+  setStatus(tile.type === "wild" ? "Selected Wild. Tap any highlighted space next to an existing tile." : `Selected ${tile.rank}. Tap a highlighted board space.`);
   render();
 }
 
@@ -429,10 +450,10 @@ function startHumanTurn() {
   state.phase = "playing";
   state.chain = 0;
   state.bombChance = BASE_BOMB_CHANCE;
-  const tile = makeTile("red");
+  const tile = drawRackTile("red");
   state.racks.red.push(tile);
   state.turnSnapshot = createTurnSnapshot();
-  state.lastEvent = `You drew a ${tile.rank}.`;
+  state.lastEvent = `You drew ${describeTile(tile)}.`;
   setStatus("Place one tile, or end your turn. Each placement earns a fresh draw.");
   render();
   animateDrawToRack(tile, fromRect);
@@ -468,11 +489,11 @@ function resolveFreshDraw(color) {
   if (checkRoundEnd()) return;
   const event = pickFreshEvent();
   if (event === "number") {
-    const tile = makeTile(color);
+    const tile = drawRackTile(color);
     const fromRect = color === "red" ? getTileBagRect() : null;
     state.racks[color].push(tile);
     const nextRisk = nextBombChance();
-    state.lastEvent = `${TEAM_LABEL[color]} drew a fresh ${tile.rank}. Bomb risk rises to ${nextRisk}%.`;
+    state.lastEvent = `${TEAM_LABEL[color]} drew ${describeTile(tile)}. Bomb risk rises to ${nextRisk}%.`;
     setStatus(color === "red" ? `Fresh tile added. Bomb risk is now ${nextRisk}%.` : state.lastEvent);
     state.bombChance = nextRisk;
     state.phase = color === "red" ? "drawing" : "cpu";
@@ -712,9 +733,9 @@ function otherTeam(color) {
 function runCpuTurn() {
   if (state.phase !== "cpu" || state.turn !== "blue") return;
   state.chain = 0;
-  const tile = makeTile("blue");
+  const tile = drawRackTile("blue");
   state.racks.blue.push(tile);
-  state.lastEvent = `Blue CPU drew a ${tile.rank}.`;
+  state.lastEvent = `Blue CPU drew ${describeTile(tile)}.`;
   render();
   state.cpuTimer = window.setTimeout(cpuStep, 520);
 }
@@ -876,9 +897,9 @@ function renderRack() {
   labelEl.textContent = "Red Tiles";
   const tilesEl = document.createElement("div");
   tilesEl.className = "rack-tiles lite-rack";
-  RANKS.forEach((rank) => {
+  [...RANKS, "W"].forEach((rank) => {
     const matchingTiles = state.racks.red.filter((tile) => tile.rank === rank);
-    const tile = matchingTiles[0] || { id: `empty-score-${rank}`, type: "score", color: "red", rank };
+    const tile = matchingTiles[0] || { id: `empty-score-${rank}`, type: rank === "W" ? "wild" : "score", color: "red", rank };
     const tileEl = renderTile(tile, Boolean(matchingTiles.length));
     tileEl.classList.add("rack-slot");
     tileEl.classList.toggle("empty", !matchingTiles.length);
@@ -896,9 +917,9 @@ function renderRack() {
 
 function renderTile(tile, asButton) {
   const el = document.createElement(asButton ? "button" : "div");
-  el.className = `tile ${tile.color}`;
+  el.className = `tile ${tile.color} ${tile.type === "wild" ? "wild" : ""}`;
   el.dataset.tile = tile.id;
-  el.innerHTML = `${tile.rank}<small>${tile.color}</small>`;
+  el.innerHTML = `${tile.rank}<small>${tile.type === "wild" ? "wild" : tile.color}</small>`;
   return el;
 }
 
@@ -914,7 +935,7 @@ function renderHud() {
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
   els.endTurnBtn.disabled = state.turn !== "red" || state.phase !== "playing";
   document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && state.phase === "needDraw");
-  if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red number tile.");
+  if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red tile.");
   if (state.phase === "drawing") setStatus("Drawing...");
   if (state.phase === "placing") setStatus("Tile placed. Drawing automatically.");
   if (state.phase === "cpu") setStatus("Blue CPU is taking its turn.");
