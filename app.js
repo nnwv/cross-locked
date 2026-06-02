@@ -108,6 +108,7 @@ const state = {
 
 const els = {
   board: document.querySelector("#board"),
+  tileBag: document.querySelector("#tileBag"),
   rack: document.querySelector("#rack"),
   redScore: document.querySelector("#redScore"),
   blueScore: document.querySelector("#blueScore"),
@@ -172,33 +173,45 @@ function setupRound() {
   X_DEFS.flatMap((x) => x.cells).forEach((cell) => {
     state.board[cell.id] = null;
   });
-  seedCenters();
-  drawStartingRack("red");
+  const boardDeals = seedCenters();
+  const redRackDeals = drawStartingRack("red");
   drawStartingRack("blue");
   state.turn = state.round === 2 ? "red" : "blue";
   state.phase = state.turn === "red" ? "needDraw" : "cpu";
   state.lastEvent = `Round ${state.round}: ${TEAM_LABEL[state.turn]} starts.`;
   render();
+  animateOpeningDeal(boardDeals, redRackDeals);
   if (state.turn === "blue") {
-    state.cpuTimer = window.setTimeout(runCpuTurn, 700);
+    state.cpuTimer = window.setTimeout(runCpuTurn, 1900);
   }
 }
 
 function seedCenters() {
+  const deals = [];
   const smallCenters = shuffle(X_DEFS.filter((x) => x.type === "small").map((x) => x.cells.find((cell) => cell.center).id));
   smallCenters.slice(0, 1).forEach((cellId) => {
     state.board[cellId] = makeTile("red", randomRank(), true);
+    deals.push({ tile: state.board[cellId], cellId });
   });
   smallCenters.slice(1).forEach((cellId) => {
     state.board[cellId] = makeTile("blue", randomRank(), true);
+    deals.push({ tile: state.board[cellId], cellId });
   });
   const superCenter = getXDef("super").cells.find((cell) => cell.center).id;
   const superColor = state.round === 2 ? "blue" : "red";
   state.board[superCenter] = makeTile(superColor, randomRank(), true);
+  deals.push({ tile: state.board[superCenter], cellId: superCenter });
+  return deals;
 }
 
 function drawStartingRack(color) {
-  while (state.racks[color].length < 10) state.racks[color].push(makeTile(color));
+  const deals = [];
+  while (state.racks[color].length < 10) {
+    const tile = makeTile(color);
+    state.racks[color].push(tile);
+    deals.push(tile);
+  }
+  return deals;
 }
 
 function getXDef(xId) {
@@ -236,6 +249,21 @@ function isPattern(tiles, targetLength = tiles.length) {
   return unique[unique.length - 1] - unique[0] + 1 === unique.length;
 }
 
+function getAdjacentOccupiedTiles(cellId) {
+  return getLinesForCell(cellId).flatMap((line) => {
+    const index = line.cells.indexOf(cellId);
+    return [line.cells[index - 1], line.cells[index + 1]]
+      .filter(Boolean)
+      .map((id) => state.board[id])
+      .filter(Boolean);
+  });
+}
+
+function canTouch(tile, neighbor) {
+  const distance = Math.abs(Number(tile.rank) - Number(neighbor.rank));
+  return distance === 0 || distance === 1;
+}
+
 function lineQualifiesForTeam(line, team) {
   if (!isLineFull(line)) return false;
   const tiles = line.cells.map((id) => state.board[id]);
@@ -253,8 +281,11 @@ function canPlaceTile(tile, cellId) {
   if (!cell || state.board[cellId]) return { ok: false, reason: "That spot is already full." };
   if (!tile || tile.type !== "score") return { ok: false, reason: "Pick a number tile first." };
   const lines = getLinesForCell(cellId);
-  const connected = lines.some((line) => line.cells.some((id) => state.board[id]));
-  if (!connected) return { ok: false, reason: "Play next to an existing center pattern." };
+  const neighbors = getAdjacentOccupiedTiles(cellId);
+  if (!neighbors.length) return { ok: false, reason: "Place your tile directly next to an existing tile." };
+  if (!neighbors.every((neighbor) => canTouch(tile, neighbor))) {
+    return { ok: false, reason: "Tiles can only touch the same number, or the next number up or down." };
+  }
   state.board[cellId] = tile;
   const fits = lines.some((line) => {
     const tiles = getLineTiles(line);
@@ -398,7 +429,7 @@ function clearCrossToFreshCenter(x, color) {
 
 function startHumanTurn() {
   if (state.turn !== "red" || state.phase !== "needDraw") return;
-  const fromRect = els.drawPlayBtn.getBoundingClientRect();
+  const fromRect = getTileBagRect();
   state.phase = "playing";
   state.chain = 0;
   state.bombChance = BASE_BOMB_CHANCE;
@@ -442,7 +473,7 @@ function resolveFreshDraw(color) {
   const event = pickFreshEvent();
   if (event === "number") {
     const tile = makeTile(color);
-    const fromRect = color === "red" ? document.querySelector(".rack-turn-card")?.getBoundingClientRect() : null;
+    const fromRect = color === "red" ? getTileBagRect() : null;
     state.racks[color].push(tile);
     const nextRisk = nextBombChance();
     state.lastEvent = `${TEAM_LABEL[color]} drew a fresh ${tile.rank}. Bomb risk rises to ${nextRisk}%.`;
@@ -544,8 +575,7 @@ function createBombBurst(cellId, color) {
 
 function showSpecialDraw(drawColor, tile, onDone) {
   state.phase = "drawing";
-  const source = drawColor === "red" ? els.drawPlayBtn : els.blueScore.closest(".score-pill");
-  const fromRect = source?.getBoundingClientRect();
+  const fromRect = getTileBagRect() || (drawColor === "red" ? els.drawPlayBtn : els.blueScore.closest(".score-pill"))?.getBoundingClientRect();
   const targetRect = document.querySelector(".rack-turn-card")?.getBoundingClientRect() || fromRect;
   if (!fromRect || !targetRect) {
     onDone();
@@ -578,6 +608,71 @@ function showSpecialDraw(drawColor, tile, onDone) {
       el.remove();
       onDone();
     }, 520);
+  };
+}
+
+function getTileBagRect() {
+  els.tileBag?.classList.remove("bag-pop");
+  if (els.tileBag) {
+    void els.tileBag.offsetWidth;
+    els.tileBag.classList.add("bag-pop");
+  }
+  return els.tileBag?.getBoundingClientRect();
+}
+
+function animateOpeningDeal(boardDeals, rackDeals) {
+  const fromRect = getTileBagRect();
+  if (!fromRect) return;
+  const deals = [
+    ...boardDeals.map((deal) => ({
+      tile: deal.tile,
+      target: document.querySelector(`.cell[data-cell="${deal.cellId}"]`),
+      className: "board-deal-land"
+    })),
+    ...rackDeals.map((tile) => ({
+      tile,
+      target: document.querySelector(`.rack-slot[data-rank="${tile.rank}"]`),
+      className: "rack-landed"
+    }))
+  ].filter((deal) => deal.target);
+  deals.forEach((deal, index) => {
+    window.setTimeout(() => {
+      els.tileBag?.classList.remove("bag-pop");
+      if (els.tileBag) {
+        void els.tileBag.offsetWidth;
+        els.tileBag.classList.add("bag-pop");
+      }
+      animateTileFromBag(deal.tile, deal.target, deal.className);
+    }, index * 85);
+  });
+}
+
+function animateTileFromBag(tile, target, landedClass) {
+  const fromRect = els.tileBag?.getBoundingClientRect();
+  const toRect = target?.getBoundingClientRect();
+  if (!fromRect || !toRect) return;
+  const flyer = renderTile(tile, false);
+  flyer.classList.add("tile-flyer", "deal-flyer");
+  const startSize = Math.min(40, fromRect.height || 40);
+  flyer.style.left = `${fromRect.left + fromRect.width / 2 - startSize / 2}px`;
+  flyer.style.top = `${fromRect.top + fromRect.height * 0.2}px`;
+  flyer.style.width = `${startSize}px`;
+  flyer.style.height = `${startSize}px`;
+  document.body.append(flyer);
+  const deltaX = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2);
+  const deltaY = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height * 0.2 + startSize / 2);
+  const animation = flyer.animate(
+    [
+      { transform: "translate(0, 0) scale(0.5) rotate(-10deg)", opacity: 0 },
+      { transform: "translate(0, -20px) scale(0.92) rotate(4deg)", opacity: 1, offset: 0.24 },
+      { transform: `translate(${deltaX}px, ${deltaY}px) scale(${Math.max(0.85, toRect.width / startSize)}) rotate(0deg)`, opacity: 1 }
+    ],
+    { duration: 520, easing: "cubic-bezier(.18,.82,.2,1)" }
+  );
+  animation.onfinish = () => {
+    flyer.remove();
+    target.classList.add(landedClass);
+    window.setTimeout(() => target.classList.remove(landedClass), 430);
   };
 }
 
@@ -869,7 +964,7 @@ function getTurnTitle() {
 }
 
 function setStatus(message) {
-  els.statusText.textContent = `${message} ${state.lastEvent ? `(${state.lastEvent})` : ""}`;
+  els.statusText.textContent = message;
 }
 
 els.drawPlayBtn.addEventListener("click", () => {

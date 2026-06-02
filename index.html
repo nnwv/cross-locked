@@ -26,6 +26,10 @@
               <strong id="blueScore">0</strong>
             </div>
           </div>
+          <div id="tileBag" class="tile-bag" aria-label="Tile bag">
+            <span class="bag-mouth"></span>
+            <strong>Tile Bag</strong>
+          </div>
           <div id="board" class="board"></div>
         </section>
 
@@ -75,11 +79,14 @@
         <button id="closeRulesBtn" class="icon-button" aria-label="Close rules">x</button>
       </div>
       <ul>
-        <li>Red only plays red 1-5 tiles. Blue CPU only plays blue 1-5 tiles.</li>
-        <li>Each round starts with random center tiles. Round 1 starts with Blue CPU; round 2 starts with Red.</li>
-        <li>Tiles must fit a center line as matching numbers or a sequence.</li>
-        <li>After every placed tile, press Draw to reveal a number tile, Red Bomb, or Blue Bomb.</li>
-        <li>Short lines score 25. Long lines score 50. A full small cross scores 100 and a full big cross scores 200, with no extra line points for that cross.</li>
+        <li>You are Red. Play red number tiles from 1-5. Blue CPU plays blue number tiles from 1-5.</li>
+        <li>The game lasts 2 rounds. Round 1 starts with Blue CPU, and round 2 starts with Red.</li>
+        <li>Each round begins with random center tiles already on the crosses.</li>
+        <li>Press Draw only to start your turn. After you place a tile, the next tile or bomb is drawn automatically.</li>
+        <li>Placed tiles must fit the line from the center: matching numbers, or a clean sequence with no skipped numbers.</li>
+        <li>Bombs remove 1 or 2 loose tiles of the bomb color, then end the turn.</li>
+        <li>Short lines score 25. Long lines score 50. A full small cross scores 100. A full big cross scores 200.</li>
+        <li>When a full cross scores, it resets with a fresh center tile. Full crosses do not also score line points.</li>
       </ul>
     </dialog>
 
