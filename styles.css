@@ -13,7 +13,7 @@
   --blue: #1768c2;
   --yellow: #f2c94c;
   --green: #34c759;
-  --tile-size: clamp(42px, 4.1vw, 52px);
+  --tile-size: clamp(38px, 3.7vw, 50px);
   --shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
   --soft-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
@@ -1097,10 +1097,10 @@ h2 {
 }
 
 .rack-tiles.lite-rack {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   justify-content: start;
-  gap: clamp(5px, 0.9vw, 10px);
-  width: min(100%, calc((var(--tile-size) * 6) + 50px));
+  gap: clamp(4px, 0.65vw, 8px);
+  width: min(100%, calc((var(--tile-size) * 8) + 56px));
   padding: 6px 2px 7px;
 }
 
@@ -1261,8 +1261,8 @@ h2 {
 }
 
 .rack-group:last-child .rack-tiles.lite-rack {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: clamp(5px, 0.9vw, 10px);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: clamp(4px, 0.65vw, 8px);
 }
 
 .rack-slot {
@@ -1442,7 +1442,7 @@ li {
   }
 
   :root {
-    --tile-size: 40px;
+    --tile-size: 34px;
   }
 
   .tile small {

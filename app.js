@@ -1,4 +1,4 @@
-const RANKS = ["1", "2", "3", "4", "5"];
+const RANKS = ["1", "2", "3", "4", "5", "6", "7"];
 const TOTAL_ROUNDS = 2;
 const BASE_BOMB_CHANCE = 8;
 const BOMB_CHANCE_STEP = 4;
