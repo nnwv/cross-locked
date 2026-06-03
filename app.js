@@ -120,8 +120,15 @@ const els = {
   endTurnBtn: document.querySelector("#endTurnBtn"),
   rulesDialog: document.querySelector("#rulesDialog"),
   rulesBtn: document.querySelector("#rulesBtn"),
-  closeRulesBtn: document.querySelector("#closeRulesBtn")
+  closeRulesBtn: document.querySelector("#closeRulesBtn"),
+  messageDialog: document.querySelector("#messageDialog"),
+  messageEyebrow: document.querySelector("#messageEyebrow"),
+  messageTitle: document.querySelector("#messageTitle"),
+  messageBody: document.querySelector("#messageBody"),
+  messageActionBtn: document.querySelector("#messageActionBtn")
 };
+
+let pendingMessageAction = null;
 
 function uid(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -166,6 +173,44 @@ function loadRecords() {
 
 function saveRecords() {
   localStorage.setItem("crossLockedLiteRecords", JSON.stringify(state.records));
+}
+
+function winnerText(redScore, blueScore, label) {
+  if (redScore === blueScore) return `${label} is a tie`;
+  return `${redScore > blueScore ? "Red" : "Blue CPU"} wins the ${label.toLowerCase()}`;
+}
+
+function showMessage({ eyebrow, title, body, scoreCard = null, actionText = "Continue", onAction = null }) {
+  els.messageEyebrow.textContent = eyebrow;
+  els.messageTitle.textContent = title;
+  els.messageBody.replaceChildren(scoreCard ? renderScoreCard(scoreCard) : document.createTextNode(body));
+  els.messageActionBtn.textContent = actionText;
+  pendingMessageAction = onAction;
+  if (!els.messageDialog.open) els.messageDialog.showModal();
+}
+
+function renderScoreCard(card) {
+  const wrap = document.createElement("div");
+  wrap.className = "score-card";
+  const rows = [
+    ["Round", card.round.red, card.round.blue],
+    ["Game", card.game.red, card.game.blue]
+  ];
+  rows.forEach(([label, redValue, blueValue]) => {
+    const row = document.createElement("div");
+    row.className = "score-card-row";
+    row.innerHTML = `
+      <span>${label}</span>
+      <strong class="red">${redValue}</strong>
+      <strong class="blue">${blueValue}</strong>
+    `;
+    wrap.append(row);
+  });
+  const footer = document.createElement("p");
+  footer.className = "score-card-note";
+  footer.textContent = card.note;
+  wrap.append(footer);
+  return wrap;
 }
 
 function setupRound() {
@@ -790,28 +835,58 @@ function evaluatePlacement(team, tile, cellId) {
 
 function checkRoundEnd() {
   if (!Object.values(state.board).every(Boolean)) return false;
+  window.clearTimeout(state.cpuTimer);
   const roundScore = scoreRound();
+  const endedRound = state.round;
   state.scores.red += roundScore.red.total;
   state.scores.blue += roundScore.blue.total;
   if (state.round >= TOTAL_ROUNDS) {
-    finishGame();
+    finishGame(roundScore, endedRound);
     return true;
   }
-  state.round += 1;
-  setupRound();
+  state.phase = "roundOver";
+  state.selectedTileId = null;
+  state.lastEvent = winnerText(roundScore.red.total, roundScore.blue.total, `Round ${endedRound}`);
+  setStatus(state.lastEvent);
+  render();
+  showMessage({
+    eyebrow: `Round ${endedRound} complete`,
+    title: state.lastEvent,
+    scoreCard: {
+      round: { red: roundScore.red.total, blue: roundScore.blue.total },
+      game: { red: state.scores.red, blue: state.scores.blue },
+      note: `Round ${endedRound} is complete.`
+    },
+    actionText: `Start Round ${endedRound + 1}`,
+    onAction: () => {
+      state.round += 1;
+      setupRound();
+    }
+  });
   return true;
 }
 
-function finishGame() {
+function finishGame(roundScore, endedRound) {
   const total = state.scores.red + state.scores.blue;
   const margin = Math.abs(state.scores.red - state.scores.blue);
   state.records.highGame = Math.max(state.records.highGame, total);
   state.records.largestMargin = Math.max(state.records.largestMargin, margin);
   saveRecords();
   state.phase = "gameOver";
-  state.lastEvent = state.scores.red === state.scores.blue ? "Tie game." : state.scores.red > state.scores.blue ? "Red wins the game." : "Blue CPU wins the game.";
+  state.selectedTileId = null;
+  state.lastEvent = winnerText(state.scores.red, state.scores.blue, "Game");
   setStatus(state.lastEvent);
   render();
+  showMessage({
+    eyebrow: `Game complete after Round ${endedRound}`,
+    title: state.lastEvent,
+    scoreCard: {
+      round: { red: roundScore.red.total, blue: roundScore.blue.total },
+      game: { red: state.scores.red, blue: state.scores.blue },
+      note: `Final margin: ${Math.abs(state.scores.red - state.scores.blue)}.`
+    },
+    actionText: "Done"
+  });
 }
 
 function scoreRound() {
@@ -927,8 +1002,8 @@ function renderHud() {
   const liveRoundScore = state.phase === "gameOver" || state.phase === "scoring" ? { red: { total: 0 }, blue: { total: 0 } } : scoreRound();
   updateScoreBox(els.redScore, "red", state.scores.red + liveRoundScore.red.total);
   updateScoreBox(els.blueScore, "blue", state.scores.blue + liveRoundScore.blue.total);
-  els.redScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "red" && state.phase !== "gameOver");
-  els.blueScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "blue" && state.phase !== "gameOver");
+  els.redScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
+  els.blueScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
   els.roundLabel.textContent = `${state.round}/${TOTAL_ROUNDS}`;
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
@@ -971,6 +1046,7 @@ function animateScoreDelta(pill, delta, team) {
 
 function getTurnTitle() {
   if (state.phase === "gameOver") return "Game over";
+  if (state.phase === "roundOver") return "Round over";
   if (state.turn === "blue") return "Blue CPU";
   if (state.phase === "needDraw") return "Your turn";
   if (state.phase === "drawing") return "Drawing";
@@ -995,5 +1071,11 @@ els.drawPlayBtn.addEventListener("click", () => {
 els.endTurnBtn.addEventListener("click", endHumanTurn);
 els.rulesBtn.addEventListener("click", () => els.rulesDialog.showModal());
 els.closeRulesBtn.addEventListener("click", () => els.rulesDialog.close());
+els.messageActionBtn.addEventListener("click", () => els.messageDialog.close());
+els.messageDialog.addEventListener("close", () => {
+  const action = pendingMessageAction;
+  pendingMessageAction = null;
+  if (action) action();
+});
 
 setupRound();

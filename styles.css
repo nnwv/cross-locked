@@ -1340,6 +1340,77 @@ dialog::backdrop {
   gap: 12px;
 }
 
+.message-dialog {
+  width: min(460px, calc(100% - 28px));
+  padding: 22px;
+  text-align: center;
+}
+
+.message-dialog h2 {
+  margin-bottom: 10px;
+  font-size: 1.35rem;
+}
+
+.message-body {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.42;
+}
+
+.score-card {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.score-card-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(72px, auto) minmax(72px, auto);
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.66);
+  text-align: left;
+}
+
+.score-card-row span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.score-card-row strong {
+  display: grid;
+  place-items: center;
+  min-width: 72px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: white;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.score-card-row strong.red {
+  background: linear-gradient(180deg, #ef5a63, #b91f2a);
+}
+
+.score-card-row strong.blue {
+  background: linear-gradient(180deg, #3f8fe4, #1556a0);
+}
+
+.score-card-note {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.message-dialog button {
+  width: min(220px, 100%);
+}
+
 li {
   margin-bottom: 10px;
   color: var(--muted);
