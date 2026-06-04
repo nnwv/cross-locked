@@ -91,6 +91,10 @@ const BOARD_LAYOUT = {
 const state = {
   round: 1,
   scores: { red: 0, blue: 0 },
+  roundScores: {
+    1: { red: null, blue: null },
+    2: { red: null, blue: null }
+  },
   displayedScores: { red: 0, blue: 0 },
   records: loadRecords(),
   turn: "blue",
@@ -192,17 +196,13 @@ function showMessage({ eyebrow, title, body, scoreCard = null, actionText = "Con
 function renderScoreCard(card) {
   const wrap = document.createElement("div");
   wrap.className = "score-card";
-  const rows = [
-    ["Round", card.round.red, card.round.blue],
-    ["Game", card.game.red, card.game.blue]
-  ];
-  rows.forEach(([label, redValue, blueValue]) => {
+  card.rows.forEach(({ label, red, blue, total }) => {
     const row = document.createElement("div");
-    row.className = "score-card-row";
+    row.className = `score-card-row ${total ? "total" : ""}`;
     row.innerHTML = `
       <span>${label}</span>
-      <strong class="red">${redValue}</strong>
-      <strong class="blue">${blueValue}</strong>
+      <strong class="red">${red ?? "-"}</strong>
+      <strong class="blue">${blue ?? "-"}</strong>
     `;
     wrap.append(row);
   });
@@ -211,6 +211,17 @@ function renderScoreCard(card) {
   footer.textContent = card.note;
   wrap.append(footer);
   return wrap;
+}
+
+function buildScoreCard(note) {
+  return {
+    rows: [
+      { label: "Round 1", ...state.roundScores[1] },
+      { label: "Round 2", ...state.roundScores[2] },
+      { label: "Game Total", red: state.scores.red, blue: state.scores.blue, total: true }
+    ],
+    note
+  };
 }
 
 function setupRound() {
@@ -325,6 +336,48 @@ function canTouch(tile, neighbor) {
   return distance === 0 || distance === 1;
 }
 
+function asResolvedWild(tile, rank) {
+  return { ...tile, type: "score", rank, actedAsWild: true };
+}
+
+function canResolvedTileFit(tile, cellId) {
+  const lines = getLinesForCell(cellId);
+  const neighbors = getAdjacentOccupiedTiles(cellId);
+  if (!neighbors.length) return false;
+  if (!neighbors.every((neighbor) => canTouch(tile, neighbor))) return false;
+  state.board[cellId] = tile;
+  const fits = lines.some((line) => {
+    const tiles = getLineTiles(line);
+    if (tiles.length < 2) return false;
+    return isPattern(tiles, line.cells.length);
+  });
+  state.board[cellId] = null;
+  return fits;
+}
+
+function scoreResolvedWildChoice(tile, cellId, team) {
+  state.board[cellId] = tile;
+  let value = scoreRound()[team].total;
+  getLinesForCell(cellId).forEach((line) => {
+    const tiles = getLineTiles(line);
+    if (tiles.every((item) => item.color === team) && isPattern(tiles, line.cells.length)) value += tiles.length * 4;
+  });
+  state.board[cellId] = null;
+  return value;
+}
+
+function resolveWildForPlacement(tile, cellId, team = tile.color) {
+  if (tile.type !== "wild") return tile;
+  const choices = RANKS
+    .map((rank) => asResolvedWild(tile, rank))
+    .filter((candidate) => canResolvedTileFit(candidate, cellId))
+    .map((candidate) => ({ tile: candidate, value: scoreResolvedWildChoice(candidate, cellId, team) }))
+    .sort((a, b) => b.value - a.value || Number(a.tile.rank) - Number(b.tile.rank));
+  if (choices.length) return choices[0].tile;
+  const neighbor = getAdjacentOccupiedTiles(cellId).find((item) => item.type !== "wild");
+  return asResolvedWild(tile, neighbor?.rank || "1");
+}
+
 function lineQualifiesForTeam(line, team) {
   if (!isLineFull(line)) return false;
   const tiles = line.cells.map((id) => state.board[id]);
@@ -383,12 +436,37 @@ function placeSelectedTile(cellId) {
   state.turnSnapshot = createTurnSnapshot();
   render();
   animateTileToBoard(tile.id, fromRect);
-  window.setTimeout(() => resolvePostPlacement("red", cellId), 340);
+  window.setTimeout(() => {
+    resolvePlacedWild("red", cellId, () => resolvePostPlacement("red", cellId));
+  }, 340);
 }
 
 function placeTile(color, tile, cellId) {
   state.board[cellId] = tile;
   state.racks[color] = state.racks[color].filter((item) => item.id !== tile.id);
+}
+
+function resolvePlacedWild(color, cellId, next) {
+  const tile = state.board[cellId];
+  if (!tile || tile.type !== "wild") {
+    next();
+    return;
+  }
+  const resolved = resolveWildForPlacement(tile, cellId, color);
+  const target = document.querySelector(`.cell[data-cell="${cellId}"] .tile`);
+  if (!target) {
+    state.board[cellId] = resolved;
+    render();
+    next();
+    return;
+  }
+  target.classList.add("wild-transforming");
+  window.setTimeout(() => {
+    state.board[cellId] = resolved;
+    render();
+    document.querySelector(`.cell[data-cell="${cellId}"] .tile`)?.classList.add("wild-resolved");
+    window.setTimeout(next, 240);
+  }, 180);
 }
 
 function animateTileToBoard(tileId, fromRect) {
@@ -798,10 +876,12 @@ function cpuStep() {
   render();
   animateCpuTileToBoard(best.tile.id);
   state.cpuTimer = window.setTimeout(() => {
-    resolvePostPlacement("blue", best.cellId);
-    if (state.turn === "blue" && state.phase === "cpu") {
-      state.cpuTimer = window.setTimeout(cpuStep, 650);
-    }
+    resolvePlacedWild("blue", best.cellId, () => {
+      resolvePostPlacement("blue", best.cellId);
+      if (state.turn === "blue" && state.phase === "cpu") {
+        state.cpuTimer = window.setTimeout(cpuStep, 650);
+      }
+    });
   }, 640);
 }
 
@@ -820,7 +900,8 @@ function findBestPlacement(team) {
 function evaluatePlacement(team, tile, cellId) {
   const result = canPlaceTile(tile, cellId);
   if (!result.ok) return -1;
-  state.board[cellId] = tile;
+  const placedTile = resolveWildForPlacement(tile, cellId, team);
+  state.board[cellId] = placedTile;
   const before = scoreRound()[team].total;
   let value = before;
   const cell = getCellDef(cellId);
@@ -838,6 +919,7 @@ function checkRoundEnd() {
   window.clearTimeout(state.cpuTimer);
   const roundScore = scoreRound();
   const endedRound = state.round;
+  state.roundScores[endedRound] = { red: roundScore.red.total, blue: roundScore.blue.total };
   state.scores.red += roundScore.red.total;
   state.scores.blue += roundScore.blue.total;
   if (state.round >= TOTAL_ROUNDS) {
@@ -852,11 +934,7 @@ function checkRoundEnd() {
   showMessage({
     eyebrow: `Round ${endedRound} complete`,
     title: state.lastEvent,
-    scoreCard: {
-      round: { red: roundScore.red.total, blue: roundScore.blue.total },
-      game: { red: state.scores.red, blue: state.scores.blue },
-      note: `Round ${endedRound} is complete.`
-    },
+    scoreCard: buildScoreCard(`Round ${endedRound} is complete.`),
     actionText: `Start Round ${endedRound + 1}`,
     onAction: () => {
       state.round += 1;
@@ -880,11 +958,7 @@ function finishGame(roundScore, endedRound) {
   showMessage({
     eyebrow: `Game complete after Round ${endedRound}`,
     title: state.lastEvent,
-    scoreCard: {
-      round: { red: roundScore.red.total, blue: roundScore.blue.total },
-      game: { red: state.scores.red, blue: state.scores.blue },
-      note: `Final margin: ${Math.abs(state.scores.red - state.scores.blue)}.`
-    },
+    scoreCard: buildScoreCard(`Final margin: ${Math.abs(state.scores.red - state.scores.blue)}.`),
     actionText: "Done"
   });
 }
@@ -1062,6 +1136,10 @@ els.drawPlayBtn.addEventListener("click", () => {
   if (state.phase === "gameOver") {
     state.round = 1;
     state.scores = { red: 0, blue: 0 };
+    state.roundScores = {
+      1: { red: null, blue: null },
+      2: { red: null, blue: null }
+    };
     state.displayedScores = { red: 0, blue: 0 };
     setupRound();
   } else {

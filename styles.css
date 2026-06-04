@@ -969,6 +969,39 @@ h2 {
   display: none;
 }
 
+.cell .tile.wild-transforming {
+  animation: wildFlipOut 180ms ease-in forwards;
+}
+
+.cell .tile.wild-resolved {
+  animation: wildFlipIn 260ms cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes wildFlipOut {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    filter: brightness(1);
+  }
+  100% {
+    transform: rotateY(88deg) scale(1.08);
+    filter: brightness(1.18);
+  }
+}
+
+@keyframes wildFlipIn {
+  0% {
+    transform: rotateY(-88deg) scale(1.08);
+    filter: brightness(1.18);
+  }
+  58% {
+    transform: rotateY(0deg) scale(1.12);
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    filter: brightness(1);
+  }
+}
+
 .side-panel {
   display: grid;
   gap: 10px;
@@ -998,14 +1031,6 @@ h2 {
   gap: 8px;
 }
 
-.rack-head {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
 .icon-button {
   width: 40px;
   min-height: 40px;
@@ -1030,7 +1055,7 @@ h2 {
 
 .rack-card {
   display: grid;
-  grid-template-columns: minmax(130px, 0.45fr) minmax(300px, 1fr) minmax(340px, 1.05fr);
+  grid-template-columns: minmax(360px, 1.35fr) minmax(340px, 1fr);
   align-items: center;
   gap: 14px;
   min-height: 0;
@@ -1057,6 +1082,10 @@ h2 {
 
 .rack-turn-card .turn-actions button {
   min-height: 40px;
+}
+
+.rack-turn-card .turn-actions {
+  grid-template-columns: 1fr 1fr 44px;
 }
 
 .rack-turn-card.player-ready {
@@ -1375,6 +1404,11 @@ dialog::backdrop {
   text-align: left;
 }
 
+.score-card-row.total {
+  border-color: rgba(29, 29, 31, 0.16);
+  background: rgba(29, 29, 31, 0.06);
+}
+
 .score-card-row span {
   color: var(--muted);
   font-size: 0.72rem;
@@ -1391,6 +1425,10 @@ dialog::backdrop {
   color: white;
   font-size: 1.25rem;
   line-height: 1;
+}
+
+.score-card-row.total strong {
+  font-size: 1.36rem;
 }
 
 .score-card-row strong.red {
@@ -1444,6 +1482,10 @@ li {
     grid-template-columns: 1fr;
     align-items: stretch;
     min-height: 0;
+  }
+
+  .rack-turn-card .turn-actions {
+    grid-template-columns: 1fr 1fr 44px;
   }
 }
 
@@ -1527,6 +1569,10 @@ li {
   .rack-card {
     grid-template-columns: 1fr;
     min-height: 0;
+  }
+
+  .rack-turn-card .turn-actions {
+    grid-template-columns: 1fr 1fr 40px;
   }
 
   .rack-tiles {
