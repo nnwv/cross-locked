@@ -1,4 +1,5 @@
 const RANKS = ["1", "2", "3", "4", "5", "6", "7"];
+const CENTER_RANKS = ["3", "4", "5"];
 const TOTAL_ROUNDS = 2;
 const BASE_BOMB_CHANCE = 8;
 const BOMB_CHANCE_STEP = 4;
@@ -142,6 +143,10 @@ function randomRank() {
   return RANKS[Math.floor(Math.random() * RANKS.length)];
 }
 
+function randomCenterRank() {
+  return CENTER_RANKS[Math.floor(Math.random() * CENTER_RANKS.length)];
+}
+
 function makeTile(color, rank = randomRank(), seeded = false) {
   return { id: uid(color), type: "score", color, rank, seeded };
 }
@@ -255,16 +260,16 @@ function seedCenters() {
   const deals = [];
   const smallCenters = shuffle(X_DEFS.filter((x) => x.type === "small").map((x) => x.cells.find((cell) => cell.center).id));
   smallCenters.slice(0, 1).forEach((cellId) => {
-    state.board[cellId] = makeTile("red", randomRank(), true);
+    state.board[cellId] = makeTile("red", randomCenterRank(), true);
     deals.push({ tile: state.board[cellId], cellId });
   });
   smallCenters.slice(1).forEach((cellId) => {
-    state.board[cellId] = makeTile("blue", randomRank(), true);
+    state.board[cellId] = makeTile("blue", randomCenterRank(), true);
     deals.push({ tile: state.board[cellId], cellId });
   });
   const superCenter = getXDef("super").cells.find((cell) => cell.center).id;
   const superColor = state.round === 2 ? "blue" : "red";
-  state.board[superCenter] = makeTile(superColor, randomRank(), true);
+  state.board[superCenter] = makeTile(superColor, randomCenterRank(), true);
   deals.push({ tile: state.board[superCenter], cellId: superCenter });
   return deals;
 }
@@ -564,7 +569,7 @@ function clearCrossToFreshCenter(x, color) {
   x.cells.forEach((cell) => {
     state.board[cell.id] = null;
   });
-  state.board[center.id] = makeTile(color, randomRank(), true);
+  state.board[center.id] = makeTile(color, randomCenterRank(), true);
 }
 
 function startHumanTurn() {
@@ -635,9 +640,7 @@ function resolveFreshDraw(color) {
     return;
   }
   const bombColor = event === "redBomb" ? "red" : "blue";
-  showSpecialDraw(color, { kind: "bomb", color: bombColor, label: "BOMB", detail: TEAM_LABEL[bombColor] }, () => {
-    triggerBomb(color, bombColor);
-  });
+  triggerBomb(color, bombColor);
 }
 
 function pickFreshEvent() {
@@ -660,28 +663,26 @@ function pickBombTargets(color) {
 function triggerBomb(drawColor, bombColor) {
   const targets = pickBombTargets(bombColor);
   const removed = targets.length;
+  const fromRect = getTileBagRect();
   state.phase = "bombing";
   state.selectedTileId = null;
   state.bombChance = BASE_BOMB_CHANCE;
   state.bomb = {
     color: bombColor,
-    cells: targets,
+    cells: [],
     message: removed ? `${TEAM_LABEL[bombColor]} Bomb is clearing ${removed} tile${removed === 1 ? "" : "s"}.` : `${TEAM_LABEL[bombColor]} Bomb hit, but there were no loose ${bombColor} tiles to remove.`
   };
   state.lastEvent = `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb.`;
   setStatus(state.bomb.message);
   render();
-  window.requestAnimationFrame(() => {
-    targets.forEach((cellId) => createBombBurst(cellId, bombColor));
-  });
-  window.setTimeout(() => {
+  animateBombIconToTargets(bombColor, fromRect, targets, () => {
     targets.forEach((cellId) => {
       state.board[cellId] = null;
     });
-  state.bomb = null;
-  state.scoringCross = null;
-  passTurnTo(otherTeam(drawColor), `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb. ${removed} ${bombColor} tile${removed === 1 ? "" : "s"} removed.`);
-  }, 900);
+    state.bomb = null;
+    state.scoringCross = null;
+    passTurnTo(otherTeam(drawColor), `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb. ${removed} ${bombColor} tile${removed === 1 ? "" : "s"} removed.`);
+  });
 }
 
 function bombTiles(color) {
@@ -713,8 +714,108 @@ function createBombBurst(cellId, color) {
   window.setTimeout(() => burst.remove(), 820);
 }
 
+function createBombIcon(color) {
+  const icon = document.createElement("div");
+  icon.className = `bomb-icon ${color}`;
+  icon.innerHTML = "<span></span>";
+  return icon;
+}
+
+function animateBombIconToTargets(color, fromRect, targets, onDone) {
+  const fallbackRect = document.querySelector(".rack-turn-card")?.getBoundingClientRect();
+  const startRect = fromRect || fallbackRect;
+  if (!startRect) {
+    onDone();
+    return;
+  }
+  const size = 40;
+  const bagMouth = els.tileBag?.querySelector(".bag-mouth")?.getBoundingClientRect();
+  const startX = (bagMouth || startRect).left + (bagMouth || startRect).width / 2;
+  const startY = bagMouth ? bagMouth.top + bagMouth.height / 2 : startRect.top + startRect.height * 0.24;
+  if (!targets.length) {
+    const icon = createPositionedBombIcon(color, startX, startY, size);
+    const targetRect = fallbackRect || startRect;
+    flyBombIcon(icon, startX, startY, targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, true, () => {
+      icon.classList.add("bomb-icon-fade");
+      window.setTimeout(() => {
+        icon.remove();
+        onDone();
+      }, 360);
+    });
+    return;
+  }
+  const hitTargets = new Set();
+  let completed = 0;
+  const completeOne = () => {
+    completed += 1;
+    if (completed >= targets.length) {
+      window.setTimeout(onDone, 900);
+    }
+  };
+  targets.forEach((cellId, index) => {
+    const cell = document.querySelector(`[data-cell="${cellId}"]`);
+    if (!cell) {
+      completeOne();
+      return;
+    }
+    const icon = createPositionedBombIcon(color, startX, startY, size);
+    const rect = cell.getBoundingClientRect();
+    const nextX = rect.left + rect.width / 2;
+    const nextY = rect.top + rect.height / 2;
+    const launchDelay = index * 120;
+    window.setTimeout(() => {
+      popTileBag();
+      flyBombIcon(icon, startX, startY, nextX, nextY, true, () => {
+        icon.style.left = `${nextX - size / 2}px`;
+        icon.style.top = `${nextY - size / 2}px`;
+        icon.style.transform = "";
+        hitTargets.add(cellId);
+        state.bomb.cells = [...hitTargets];
+        render();
+        createBombBurst(cellId, color);
+        icon.classList.add("bomb-icon-fade");
+        window.setTimeout(() => {
+          icon.remove();
+          completeOne();
+        }, 340);
+      });
+    }, launchDelay);
+  });
+}
+
+function createPositionedBombIcon(color, x, y, size) {
+  const icon = createBombIcon(color);
+  icon.style.left = `${x - size / 2}px`;
+  icon.style.top = `${y - size / 2}px`;
+  icon.style.width = `${size}px`;
+  icon.style.height = `${size}px`;
+  document.body.append(icon);
+  return icon;
+}
+
+function popTileBag() {
+  els.tileBag?.classList.remove("bag-pop");
+  if (els.tileBag) {
+    void els.tileBag.offsetWidth;
+    els.tileBag.classList.add("bag-pop");
+  }
+}
+
+function flyBombIcon(icon, fromX, fromY, toX, toY, appear, onFinish) {
+  const animation = icon.animate(
+    [
+      { transform: "translate(0, 0) scale(0.78) rotate(-8deg)", opacity: appear ? 0 : 1 },
+      { transform: "translate(0, -18px) scale(1.05) rotate(5deg)", opacity: 1, offset: 0.28 },
+      { transform: `translate(${toX - fromX}px, ${toY - fromY}px) scale(1) rotate(0deg)`, opacity: 1 }
+    ],
+    { duration: 760, easing: "cubic-bezier(.14,.74,.16,1)" }
+  );
+  animation.onfinish = onFinish;
+}
+
 function showSpecialDraw(drawColor, tile, onDone) {
   state.phase = "drawing";
+  const isBomb = tile.kind === "bomb";
   const fromRect = getTileBagRect() || (drawColor === "red" ? els.drawPlayBtn : els.blueScore.closest(".score-pill"))?.getBoundingClientRect();
   const targetRect = document.querySelector(".rack-turn-card")?.getBoundingClientRect() || fromRect;
   if (!fromRect || !targetRect) {
@@ -734,29 +835,25 @@ function showSpecialDraw(drawColor, tile, onDone) {
   const animation = el.animate(
     [
       { transform: "translate(0, 0) scale(0.72) rotate(-4deg)", opacity: 0 },
-      { transform: "translate(0, -16px) scale(1) rotate(2deg)", opacity: 1, offset: 0.24 },
+      { transform: "translate(0, -20px) scale(1) rotate(2deg)", opacity: 1, offset: isBomb ? 0.34 : 0.24 },
       {
         transform: `translate(${targetRect.left + targetRect.width / 2 - (fromRect.left + fromRect.width / 2)}px, ${targetRect.top + targetRect.height / 2 - (fromRect.top + fromRect.height / 2)}px) scale(1.08) rotate(0deg)`,
         opacity: 1
       }
     ],
-    { duration: 480, easing: "cubic-bezier(.18,.82,.2,1)" }
+    { duration: isBomb ? 860 : 480, easing: isBomb ? "cubic-bezier(.12,.72,.16,1)" : "cubic-bezier(.18,.82,.2,1)" }
   );
   animation.onfinish = () => {
     el.classList.add("special-revealed");
     window.setTimeout(() => {
       el.remove();
       onDone();
-    }, 520);
+    }, isBomb ? 720 : 520);
   };
 }
 
 function getTileBagRect() {
-  els.tileBag?.classList.remove("bag-pop");
-  if (els.tileBag) {
-    void els.tileBag.offsetWidth;
-    els.tileBag.classList.add("bag-pop");
-  }
+  popTileBag();
   return els.tileBag?.getBoundingClientRect();
 }
 
@@ -996,12 +1093,6 @@ function renderBoard() {
   els.board.classList.toggle("bomb-blue", state.bomb?.color === "blue");
   X_DEFS.forEach((x) => {
     const layout = BOARD_LAYOUT[x.id];
-    const title = document.createElement("span");
-    title.className = "board-label";
-    title.textContent = x.name;
-    title.style.gridColumn = String(layout.label.col);
-    title.style.gridRow = String(layout.label.row);
-    els.board.append(title);
     x.cells.forEach((cell) => {
       const [col, row] = layout.cells[cell.pos];
       const cellEl = document.createElement("button");

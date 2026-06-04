@@ -265,10 +265,18 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 0;
   align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 246, 250, 0.92)),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(0, 0, 0, 0.045) 31px 32px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(0, 0, 0, 0.045) 31px 32px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 @media (min-width: 981px) {
@@ -286,13 +294,10 @@ h2 {
   container-type: size;
   min-height: 0;
   height: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 246, 250, 0.92)),
-    repeating-linear-gradient(0deg, transparent 0 31px, rgba(0, 0, 0, 0.045) 31px 32px),
-    repeating-linear-gradient(90deg, transparent 0 31px, rgba(0, 0, 0, 0.045) 31px 32px);
-  box-shadow: var(--shadow);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -468,16 +473,6 @@ h2 {
   64% {
     transform: translateX(3px);
   }
-}
-
-.board-label {
-  align-self: end;
-  justify-self: start;
-  color: rgba(29, 29, 31, 0.46);
-  font-size: clamp(0.48rem, calc(var(--socket-size) * 0.24), 0.68rem);
-  font-weight: 760;
-  line-height: 1;
-  text-transform: uppercase;
 }
 
 .x-board {
@@ -892,6 +887,88 @@ h2 {
   }
 }
 
+.bomb-icon {
+  position: fixed;
+  z-index: 98;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.42), transparent 18%),
+    linear-gradient(145deg, #36363a, #070708);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.bomb-icon::before {
+  content: "";
+  position: absolute;
+  right: 5px;
+  top: -8px;
+  width: 15px;
+  height: 15px;
+  border-top: 4px solid #2b2b2f;
+  border-right: 4px solid #2b2b2f;
+  border-radius: 0 10px 0 0;
+  transform: rotate(-8deg);
+}
+
+.bomb-icon::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: -12px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0 18%, #ffcf33 20% 48%, rgba(239, 90, 99, 0.98) 50% 78%, transparent 80%);
+  box-shadow: 0 0 13px rgba(255, 207, 51, 0.82);
+  animation: bombFuseSpark 420ms ease-in-out infinite alternate;
+}
+
+.bomb-icon span {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  color: white;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+
+.bomb-icon span::before {
+  content: "B";
+}
+
+.bomb-icon.red {
+  outline: 3px solid rgba(239, 90, 99, 0.36);
+}
+
+.bomb-icon.blue {
+  outline: 3px solid rgba(63, 143, 228, 0.36);
+}
+
+.bomb-icon-fade {
+  animation: bombIconFade 340ms ease forwards;
+}
+
+@keyframes bombFuseSpark {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.16);
+    opacity: 1;
+  }
+}
+
+@keyframes bombIconFade {
+  100% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
 .tile {
   display: grid;
   place-items: center;
@@ -1004,8 +1081,11 @@ h2 {
 
 .side-panel {
   display: grid;
-  gap: 10px;
+  gap: 0;
   min-height: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(18px);
 }
 
 .turn-card,
@@ -1060,13 +1140,22 @@ h2 {
   gap: 14px;
   min-height: 0;
   padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .rack-turn-card {
   margin-top: 0;
   padding: 8px 9px;
-  background: rgba(255, 255, 255, 0.72);
+  border: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
+  backdrop-filter: none;
 }
 
 .rack-turn-card h2 {
@@ -1484,6 +1573,11 @@ li {
     min-height: 0;
   }
 
+  .rack-turn-card {
+    border-left: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
   .rack-turn-card .turn-actions {
     grid-template-columns: 1fr 1fr 44px;
   }
@@ -1569,6 +1663,11 @@ li {
   .rack-card {
     grid-template-columns: 1fr;
     min-height: 0;
+  }
+
+  .rack-turn-card {
+    border-left: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   .rack-turn-card .turn-actions {
