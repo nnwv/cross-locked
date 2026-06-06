@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f5f5f7">
     <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260605-board-bag">
   </head>
   <body>
     <div class="app-shell">
@@ -26,7 +26,7 @@
               <strong id="blueScore">0</strong>
             </div>
           </div>
-          <div id="tileBag" class="tile-bag" aria-label="Tile bag">
+          <div id="tileBag" class="tile-bag board-tile-bag" aria-label="Tile bag">
             <span class="bag-mouth"></span>
             <strong>Tile Bag</strong>
           </div>
@@ -62,7 +62,7 @@
         <li>You are Red. Blue CPU is Blue. The game lasts 2 rounds, and each round starts with center tiles already placed.</li>
         <li>Press Draw to start your turn, then place a tile next to an existing tile. After each placement, a new tile, wild tile, or bomb is drawn automatically.</li>
         <li>Tiles must build from the center as matching numbers or a clean sequence. Wilds can go next to any tile and become the number they are standing in for.</li>
-        <li>Score completed lines and crosses. Bombs remove 1 or 2 loose tiles of their color and end the turn.</li>
+        <li>Score completed lines and Xs. Bombs remove 1 or 2 loose tiles of their color and end the turn.</li>
       </ul>
     </dialog>
 
@@ -73,6 +73,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260605-board-bag"></script>
   </body>
 </html>

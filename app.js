@@ -10,42 +10,66 @@ const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
 const X_DEFS = [
   {
     id: "north-west",
-    name: "Small Cross",
+    name: "Small X",
     type: "small",
     cells: [
-      { id: "nw-0", row: 1, col: 2, pos: "top" },
-      { id: "nw-1", row: 2, col: 1, pos: "left" },
+      { id: "nw-0", row: 1, col: 1, pos: "nw" },
+      { id: "nw-1", row: 1, col: 3, pos: "ne" },
       { id: "nw-2", row: 2, col: 2, pos: "c", center: true },
-      { id: "nw-3", row: 2, col: 3, pos: "right" },
-      { id: "nw-4", row: 3, col: 2, pos: "bottom" }
+      { id: "nw-3", row: 3, col: 1, pos: "sw" },
+      { id: "nw-4", row: 3, col: 3, pos: "se" }
     ]
   },
   {
     id: "north-east",
-    name: "Small Cross",
+    name: "Small X",
     type: "small",
     cells: [
-      { id: "ne-0", row: 1, col: 2, pos: "top" },
-      { id: "ne-1", row: 2, col: 1, pos: "left" },
+      { id: "ne-0", row: 1, col: 1, pos: "nw" },
+      { id: "ne-1", row: 1, col: 3, pos: "ne" },
       { id: "ne-2", row: 2, col: 2, pos: "c", center: true },
-      { id: "ne-3", row: 2, col: 3, pos: "right" },
-      { id: "ne-4", row: 3, col: 2, pos: "bottom" }
+      { id: "ne-3", row: 3, col: 1, pos: "sw" },
+      { id: "ne-4", row: 3, col: 3, pos: "se" }
+    ]
+  },
+  {
+    id: "south-west",
+    name: "Small X",
+    type: "small",
+    cells: [
+      { id: "sw-0", row: 1, col: 1, pos: "nw" },
+      { id: "sw-1", row: 1, col: 3, pos: "ne" },
+      { id: "sw-2", row: 2, col: 2, pos: "c", center: true },
+      { id: "sw-3", row: 3, col: 1, pos: "sw" },
+      { id: "sw-4", row: 3, col: 3, pos: "se" }
+    ]
+  },
+  {
+    id: "south-east",
+    name: "Small X",
+    type: "small",
+    cells: [
+      { id: "se-0", row: 1, col: 1, pos: "nw" },
+      { id: "se-1", row: 1, col: 3, pos: "ne" },
+      { id: "se-2", row: 2, col: 2, pos: "c", center: true },
+      { id: "se-3", row: 3, col: 1, pos: "sw" },
+      { id: "se-4", row: 3, col: 3, pos: "se" }
     ]
   },
   {
     id: "super",
-    name: "Big Cross",
+    name: "Big X",
     type: "super",
     cells: [
-      { id: "su-0", row: 1, col: 3, pos: "top" },
-      { id: "su-1", row: 2, col: 3, pos: "inner-top" },
-      { id: "su-2", row: 3, col: 1, pos: "left" },
-      { id: "su-3", row: 3, col: 2, pos: "inner-left" },
+      { id: "su-0", row: 1, col: 1, pos: "nw-far" },
+      { id: "su-1", row: 2, col: 2, pos: "nw-near" },
+      { id: "su-2", row: 1, col: 5, pos: "ne-far" },
+      { id: "su-3", row: 2, col: 4, pos: "ne-near" },
       { id: "su-4", row: 3, col: 3, pos: "c", center: true },
-      { id: "su-5", row: 3, col: 4, pos: "inner-right" },
-      { id: "su-6", row: 3, col: 5, pos: "right" },
-      { id: "su-7", row: 4, col: 3, pos: "inner-bottom" },
-      { id: "su-8", row: 5, col: 3, pos: "bottom" }
+      { id: "su-5", row: 4, col: 2, pos: "sw-near" },
+      { id: "su-6", row: 5, col: 1, pos: "sw-far" },
+      { id: "su-7", row: 4, col: 4, pos: "se-near" },
+      { id: "su-8", row: 5, col: 5, pos: "se-far" }
     ]
   }
 ];
@@ -53,40 +77,23 @@ const X_DEFS = [
 const LINE_DEFS = X_DEFS.flatMap((x) => {
   if (x.type === "super") {
     return [
-      { id: `${x.id}-vertical`, xId: x.id, name: "Long", points: 50, cells: ["su-0", "su-1", "su-4", "su-7", "su-8"] },
-      { id: `${x.id}-horizontal`, xId: x.id, name: "Long", points: 50, cells: ["su-2", "su-3", "su-4", "su-5", "su-6"] }
+      { id: `${x.id}-down-diagonal`, xId: x.id, name: "Long", points: 50, cells: ["su-0", "su-1", "su-4", "su-7", "su-8"] },
+      { id: `${x.id}-up-diagonal`, xId: x.id, name: "Long", points: 50, cells: ["su-2", "su-3", "su-4", "su-5", "su-6"] }
     ];
   }
   const p = x.cells.map((cell) => cell.id);
   return [
-    { id: `${x.id}-vertical`, xId: x.id, name: "Short", points: 25, cells: [p[0], p[2], p[4]] },
-    { id: `${x.id}-horizontal`, xId: x.id, name: "Short", points: 25, cells: [p[1], p[2], p[3]] }
+    { id: `${x.id}-down-diagonal`, xId: x.id, name: "Short", points: 25, cells: [p[0], p[2], p[4]] },
+    { id: `${x.id}-up-diagonal`, xId: x.id, name: "Short", points: 25, cells: [p[1], p[2], p[3]] }
   ];
 });
 
-const BOARD_LAYOUT = {
-  "north-west": {
-    label: { col: 1, row: 1 },
-    cells: { top: [2, 2], left: [1, 3], c: [2, 3], right: [3, 3], bottom: [2, 4] }
-  },
-  "north-east": {
-    label: { col: 9, row: 1 },
-    cells: { top: [10, 2], left: [9, 3], c: [10, 3], right: [11, 3], bottom: [10, 4] }
-  },
-  super: {
-    label: { col: 4, row: 4 },
-    cells: {
-      top: [6, 3],
-      "inner-top": [6, 4],
-      left: [4, 5],
-      "inner-left": [5, 5],
-      c: [6, 5],
-      "inner-right": [7, 5],
-      right: [8, 5],
-      "inner-bottom": [6, 6],
-      bottom: [6, 7]
-    }
-  }
+const BOARD_ORIGINS = {
+  "north-west": { col: 0, row: 1 },
+  "north-east": { col: 10, row: 1 },
+  "south-west": { col: 0, row: 9 },
+  "south-east": { col: 10, row: 9 },
+  super: { col: 4, row: 4 }
 };
 
 const state = {
@@ -108,7 +115,7 @@ const state = {
   lastEvent: "Welcome to Cross Locked Lite.",
   bombChance: BASE_BOMB_CHANCE,
   bomb: null,
-  scoringCross: null,
+  scoringX: null,
   cpuTimer: null
 };
 
@@ -239,7 +246,7 @@ function setupRound() {
   state.racks.blue = [];
   state.board = {};
   state.bomb = null;
-  state.scoringCross = null;
+  state.scoringX = null;
   X_DEFS.flatMap((x) => x.cells).forEach((cell) => {
     state.board[cell.id] = null;
   });
@@ -259,11 +266,12 @@ function setupRound() {
 function seedCenters() {
   const deals = [];
   const smallCenters = shuffle(X_DEFS.filter((x) => x.type === "small").map((x) => x.cells.find((cell) => cell.center).id));
-  smallCenters.slice(0, 1).forEach((cellId) => {
+  const redSmallCount = Math.ceil(smallCenters.length / 2);
+  smallCenters.slice(0, redSmallCount).forEach((cellId) => {
     state.board[cellId] = makeTile("red", randomCenterRank(), true);
     deals.push({ tile: state.board[cellId], cellId });
   });
-  smallCenters.slice(1).forEach((cellId) => {
+  smallCenters.slice(redSmallCount).forEach((cellId) => {
     state.board[cellId] = makeTile("blue", randomCenterRank(), true);
     deals.push({ tile: state.board[cellId], cellId });
   });
@@ -536,7 +544,7 @@ function animateCpuTileToBoard(tileId) {
 function resolvePostPlacement(color, cellId) {
   const x = getXDef(getCellDef(cellId).xId);
   if (xQualifiesForTeam(x, color)) {
-    scoreAndResetCross(color, x, () => {
+    scoreAndResetX(color, x, () => {
       resolveFreshDraw(color);
       if (color === "blue" && state.turn === "blue" && state.phase === "cpu") {
         state.cpuTimer = window.setTimeout(cpuStep, 650);
@@ -547,24 +555,24 @@ function resolvePostPlacement(color, cellId) {
   resolveFreshDraw(color);
 }
 
-function scoreAndResetCross(color, x, next) {
+function scoreAndResetX(color, x, next) {
   const points = x.type === "super" ? 200 : 100;
   state.phase = "scoring";
-  state.scoringCross = { xId: x.id, color, points };
+  state.scoringX = { xId: x.id, color, points };
   state.scores[color] += points;
-  state.lastEvent = `${TEAM_LABEL[color]} completed a ${x.type === "super" ? "Big Cross" : "Small Cross"} for ${points}.`;
-  setStatus(`${TEAM_LABEL[color]} scores ${points}. The cross will reset.`);
+  state.lastEvent = `${TEAM_LABEL[color]} completed a ${x.type === "super" ? "Big X" : "Small X"} for ${points}.`;
+  setStatus(`${TEAM_LABEL[color]} scores ${points}. The X will reset.`);
   render();
   window.setTimeout(() => {
-    clearCrossToFreshCenter(x, color);
-    state.scoringCross = null;
+    clearXToFreshCenter(x, color);
+    state.scoringX = null;
     state.phase = color === "red" ? "playing" : "cpu";
     render();
     window.setTimeout(next, 180);
   }, 980);
 }
 
-function clearCrossToFreshCenter(x, color) {
+function clearXToFreshCenter(x, color) {
   const center = x.cells.find((cell) => cell.center);
   x.cells.forEach((cell) => {
     state.board[cell.id] = null;
@@ -680,7 +688,7 @@ function triggerBomb(drawColor, bombColor) {
       state.board[cellId] = null;
     });
     state.bomb = null;
-    state.scoringCross = null;
+    state.scoringX = null;
     passTurnTo(otherTeam(drawColor), `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb. ${removed} ${bombColor} tile${removed === 1 ? "" : "s"} removed.`);
   });
 }
@@ -1092,20 +1100,23 @@ function renderBoard() {
   els.board.classList.toggle("bomb-red", state.bomb?.color === "red");
   els.board.classList.toggle("bomb-blue", state.bomb?.color === "blue");
   X_DEFS.forEach((x) => {
-    const layout = BOARD_LAYOUT[x.id];
     x.cells.forEach((cell) => {
-      const [col, row] = layout.cells[cell.pos];
+      const origin = BOARD_ORIGINS[x.id];
+      const col = origin.col + cell.col;
+      const row = origin.row + cell.row;
       const cellEl = document.createElement("button");
       cellEl.className = "cell";
       cellEl.style.gridColumn = String(col);
       cellEl.style.gridRow = String(row);
       cellEl.dataset.cell = cell.id;
       cellEl.dataset.x = x.id;
+      cellEl.dataset.pos = cell.pos;
       cellEl.setAttribute("aria-label", `${x.name} ${cell.pos}`);
+      if (cell.center) cellEl.classList.add("center-cell");
       const tile = state.board[cell.id];
-      const isScoringCell = state.scoringCross?.xId === x.id;
+      const isScoringCell = state.scoringX?.xId === x.id;
       if (isScoringCell) {
-        cellEl.classList.add("cross-scoring", state.scoringCross.color);
+        cellEl.classList.add("x-scoring", state.scoringX.color);
       }
       if (!tile && state.turn === "red" && state.phase === "playing") {
         const selected = state.racks.red.find((item) => item.id === state.selectedTileId);
@@ -1118,8 +1129,8 @@ function renderBoard() {
       }
       if (isScoringCell && cell.center) {
         const points = document.createElement("span");
-        points.className = "cross-points";
-        points.textContent = `+${state.scoringCross.points}`;
+        points.className = "x-points";
+        points.textContent = `+${state.scoringX.points}`;
         cellEl.append(points);
       }
       cellEl.addEventListener("click", () => placeSelectedTile(cell.id));
@@ -1180,7 +1191,7 @@ function renderHud() {
   if (state.phase === "placing") setStatus("Tile placed. Drawing automatically.");
   if (state.phase === "cpu") setStatus("Blue CPU is taking its turn.");
   if (state.phase === "bombing") setStatus(state.bomb?.message || "Bomb is resolving.");
-  if (state.phase === "scoring" && state.scoringCross) setStatus(`${TEAM_LABEL[state.scoringCross.color]} scores ${state.scoringCross.points}. Resetting that cross.`);
+  if (state.phase === "scoring" && state.scoringX) setStatus(`${TEAM_LABEL[state.scoringX.color]} scores ${state.scoringX.points}. Resetting that X.`);
 }
 
 function updateScoreBox(el, team, value) {
