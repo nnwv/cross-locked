@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f5f5f7">
     <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=20260606-centered-rack-pad">
+    <link rel="stylesheet" href="styles.css?v=20260606-round-bank">
   </head>
   <body>
     <div class="app-shell">
@@ -55,14 +55,16 @@
 
     <dialog id="rulesDialog">
       <div class="dialog-head">
-        <h2>Cross Locked Lite Rules</h2>
+        <h2>Cross Locked Lite</h2>
         <button id="closeRulesBtn" class="icon-button" aria-label="Close rules">x</button>
       </div>
       <ul>
-        <li>You are Red. Blue CPU is Blue. The game lasts 2 rounds, and each round starts with center tiles already placed.</li>
-        <li>Press Draw to start your turn, then place a tile next to an existing tile. After each placement, a new tile, wild tile, or bomb is drawn automatically.</li>
-        <li>Tiles must build from the center as either the same number or a clean sequence. Wilds can go next to any tile and become the number they are standing in for.</li>
-        <li>Score completed lines and Xs. Bombs remove 1 or 2 loose tiles of their color and end the turn.</li>
+        <li>Score the most points by completing lines and Xs with your Red tiles while blocking the Blue CPU.</li>
+        <li>Each X starts with a computer-chosen center tile. Place numbers that fit that center as either the same number or a clean sequence.</li>
+        <li>Draw to start your turn, place any rack tile that fits, then a fresh number, wild, or bomb is drawn automatically. You may end your turn any time.</li>
+        <li>Wilds can stand in for any number. Bombs remove 1 or 2 loose tiles of their color from the board and end the turn.</li>
+        <li>Short lines score 25, long lines score 50, small Xs score 100, and the big X scores 200. A completed X does not also score its lines.</li>
+        <li>The game lasts 2 rounds. A round ends when the board is full, and the high score wins.</li>
       </ul>
     </dialog>
 
@@ -73,6 +75,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260606-centered-rack-pad"></script>
+    <script src="app.js?v=20260606-round-bank"></script>
   </body>
 </html>

@@ -103,6 +103,7 @@ const state = {
     1: { red: null, blue: null },
     2: { red: null, blue: null }
   },
+  roundBanked: { red: 0, blue: 0 },
   displayedScores: { red: 0, blue: 0 },
   records: loadRecords(),
   turn: "blue",
@@ -241,6 +242,7 @@ function setupRound() {
   state.selectedTileId = null;
   state.chain = 0;
   state.turnSnapshot = null;
+  state.roundBanked = { red: 0, blue: 0 };
   state.bombChance = BASE_BOMB_CHANCE;
   state.racks.red = [];
   state.racks.blue = [];
@@ -580,6 +582,7 @@ function scoreAndResetX(color, x, next) {
   state.phase = "scoring";
   state.scoringX = { xId: x.id, color, points };
   state.scores[color] += points;
+  state.roundBanked[color] += points;
   state.lastEvent = `${TEAM_LABEL[color]} completed a ${x.type === "super" ? "Big X" : "Small X"} for ${points}.`;
   setStatus(`${TEAM_LABEL[color]} scores ${points}. The X will reset.`);
   render();
@@ -1042,11 +1045,15 @@ function evaluatePlacement(team, tile, cellId) {
 function checkRoundEnd() {
   if (!Object.values(state.board).every(Boolean)) return false;
   window.clearTimeout(state.cpuTimer);
-  const roundScore = scoreRound();
+  const boardScore = scoreRound();
+  const roundScore = {
+    red: { total: state.roundBanked.red + boardScore.red.total },
+    blue: { total: state.roundBanked.blue + boardScore.blue.total }
+  };
   const endedRound = state.round;
   state.roundScores[endedRound] = { red: roundScore.red.total, blue: roundScore.blue.total };
-  state.scores.red += roundScore.red.total;
-  state.scores.blue += roundScore.blue.total;
+  state.scores.red += boardScore.red.total;
+  state.scores.blue += boardScore.blue.total;
   if (state.round >= TOTAL_ROUNDS) {
     finishGame(roundScore, endedRound);
     return true;
@@ -1262,6 +1269,7 @@ els.drawPlayBtn.addEventListener("click", () => {
       1: { red: null, blue: null },
       2: { red: null, blue: null }
     };
+    state.roundBanked = { red: 0, blue: 0 };
     state.displayedScores = { red: 0, blue: 0 };
     setupRound();
   } else {
