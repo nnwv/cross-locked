@@ -322,17 +322,6 @@ h2 {
   pointer-events: none;
 }
 
-.board-tile-bag {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(12px, 2.2cqh, 22px);
-  z-index: 3;
-  width: clamp(52px, 5.8cqw, 68px);
-  height: clamp(58px, 6.4cqw, 76px);
-  padding: 14px 7px 9px;
-  transform: translateX(-50%);
-}
-
 .tile-bag::before,
 .tile-bag::after {
   content: "";
@@ -428,25 +417,6 @@ h2 {
   }
 }
 
-.board-tile-bag.bag-pop {
-  animation: boardBagPop 460ms cubic-bezier(.18,.82,.2,1);
-}
-
-@keyframes boardBagPop {
-  0% {
-    transform: translateX(-50%) scale(1);
-  }
-  30% {
-    transform: translateX(-50%) translateY(-3px) scale(1.06);
-  }
-  58% {
-    transform: translateX(-50%) translateY(1px) scale(0.98);
-  }
-  100% {
-    transform: translateX(-50%) scale(1);
-  }
-}
-
 @keyframes bagMouthOpen {
   0%, 100% {
     height: 16px;
@@ -459,7 +429,7 @@ h2 {
 }
 
 .board {
-  --socket-size: min(calc((100cqw - 36px) / 13), calc((100cqh - 96px) / 13), 56px);
+  --socket-size: min(calc((100cqw - 36px) / 13), calc((100cqh - 72px) / 13), 56px);
   --socket-gap: 0px;
   position: relative;
   display: grid;
@@ -471,7 +441,7 @@ h2 {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 44px 0 78px;
+  padding: 52px 0 44px;
 }
 
 .board.bomb-active {
@@ -1184,9 +1154,9 @@ h2 {
 
 .rack-card {
   display: grid;
-  grid-template-columns: minmax(380px, 1.45fr) minmax(340px, 1fr);
+  grid-template-columns: 74px minmax(340px, 1.35fr) minmax(340px, 1fr);
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-height: 0;
   padding: 10px 12px;
   border: 0;
@@ -1671,20 +1641,13 @@ li {
 
   .board {
     gap: 0;
-    padding: 58px 8px 72px;
+    padding: 54px 8px 42px;
   }
 
   .tile-bag {
     width: 52px;
     height: 58px;
     padding: 13px 6px 8px;
-  }
-
-  .board-tile-bag {
-    bottom: 10px;
-    width: 46px;
-    height: 52px;
-    padding: 12px 5px 7px;
   }
 
   .tile-bag strong {
