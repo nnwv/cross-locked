@@ -16,7 +16,8 @@
   --tile-size: clamp(38px, 3.7vw, 50px);
   --shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
   --soft-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+  --app-font: Roboto, Arial, Helvetica, sans-serif;
+  font-family: var(--app-font);
 }
 
 * {
@@ -44,7 +45,8 @@ button {
   padding: 0 14px;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.82);
-  font: inherit;
+  font-family: var(--app-font);
+  font-size: 0.92rem;
   font-weight: 650;
   cursor: pointer;
   transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
@@ -429,7 +431,7 @@ h2 {
 }
 
 .board {
-  --socket-size: min(calc((100cqw - 36px) / 13), calc((100cqh - 72px) / 13), 56px);
+  --socket-size: min(calc((100cqw - 26px) / 13), calc((100cqh - 58px) / 13), 60px);
   --socket-gap: 0px;
   position: relative;
   display: grid;
@@ -441,7 +443,7 @@ h2 {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 52px 0 44px;
+  padding: 46px 0 34px;
 }
 
 .board.bomb-active {
@@ -1000,6 +1002,7 @@ h2 {
   color: white;
   background: #777;
   box-shadow: 0 7px 18px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  font-family: var(--app-font);
   font-weight: 780;
   line-height: 1;
   user-select: none;
@@ -1143,8 +1146,10 @@ h2 {
   display: grid;
   flex: 0 0 auto;
   align-content: start;
+  justify-self: center;
   gap: 6px;
   min-height: 0;
+  width: fit-content;
   max-height: none;
   margin-top: 0;
   overflow: hidden;
@@ -1154,8 +1159,9 @@ h2 {
 
 .rack-card {
   display: grid;
-  grid-template-columns: 74px minmax(340px, 1.35fr) minmax(340px, 1fr);
+  grid-template-columns: 74px max-content max-content;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   min-height: 0;
   padding: 10px 12px;
@@ -1167,6 +1173,7 @@ h2 {
 }
 
 .rack-turn-card {
+  justify-self: center;
   margin-top: 0;
   padding: 8px 9px;
   border: 0;
@@ -1193,7 +1200,7 @@ h2 {
 }
 
 .rack-turn-card .turn-actions {
-  grid-template-columns: 1fr 1fr 44px;
+  grid-template-columns: 108px 108px 44px;
 }
 
 .rack-turn-card.player-ready {
@@ -1463,6 +1470,7 @@ dialog {
   background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
+  font-family: var(--app-font);
 }
 
 dialog::backdrop {
@@ -1593,7 +1601,13 @@ li {
   .rack-card {
     grid-template-columns: 1fr;
     align-items: stretch;
+    gap: 6px;
     min-height: 0;
+  }
+
+  .rack {
+    justify-self: stretch;
+    width: auto;
   }
 
   .rack-turn-card {
@@ -1641,7 +1655,7 @@ li {
 
   .board {
     gap: 0;
-    padding: 54px 8px 42px;
+    padding: 48px 6px 34px;
   }
 
   .tile-bag {
@@ -1689,7 +1703,13 @@ li {
 
   .rack-card {
     grid-template-columns: 1fr;
+    gap: 6px;
     min-height: 0;
+  }
+
+  .rack {
+    justify-self: stretch;
+    width: auto;
   }
 
   .rack-turn-card {

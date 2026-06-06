@@ -356,15 +356,9 @@ function asResolvedWild(tile, rank) {
 function canResolvedTileFit(tile, cellId) {
   const lines = getLinesForCell(cellId);
   const neighbors = getAdjacentOccupiedTiles(cellId);
-  if (!neighbors.length) return false;
-  if (!neighbors.every((neighbor) => canTouch(tile, neighbor))) return false;
-  state.board[cellId] = tile;
-  const fits = lines.some((line) => {
-    const tiles = getLineTiles(line);
-    if (tiles.length < 2) return false;
-    return isPattern(tiles, line.cells.length);
-  });
-  state.board[cellId] = null;
+  if (!neighbors.length && !canPlaceAtOpenBigXEnd(tile, cellId)) return false;
+  if (neighbors.length && !neighbors.every((neighbor) => canTouch(tile, neighbor))) return false;
+  const fits = lines.some((line) => lineFitsWithTile(line, tile, cellId));
   return fits;
 }
 
@@ -373,7 +367,7 @@ function scoreResolvedWildChoice(tile, cellId, team) {
   let value = scoreRound()[team].total;
   getLinesForCell(cellId).forEach((line) => {
     const tiles = getLineTiles(line);
-    if (tiles.every((item) => item.color === team) && isPattern(tiles, line.cells.length)) value += tiles.length * 4;
+    if (tiles.every((item) => item.color === team) && lineCanSupportPattern(line)) value += tiles.length * 4;
   });
   state.board[cellId] = null;
   return value;
@@ -394,13 +388,13 @@ function resolveWildForPlacement(tile, cellId, team = tile.color) {
 function lineQualifiesForTeam(line, team) {
   if (!isLineFull(line)) return false;
   const tiles = line.cells.map((id) => state.board[id]);
-  return tiles.every((tile) => tile.color === team) && isPattern(tiles, line.cells.length);
+  return tiles.every((tile) => tile.color === team) && lineCanSupportPattern(line);
 }
 
 function xQualifiesForTeam(x, team) {
   if (!isXFull(x)) return false;
   if (!x.cells.every((cell) => state.board[cell.id].color === team)) return false;
-  return LINE_DEFS.filter((line) => line.xId === x.id).every((line) => isPattern(line.cells.map((id) => state.board[id]), line.cells.length));
+  return LINE_DEFS.filter((line) => line.xId === x.id).every((line) => lineCanSupportPattern(line));
 }
 
 function canPlaceTile(tile, cellId) {
@@ -409,19 +403,45 @@ function canPlaceTile(tile, cellId) {
   if (!tile || !["score", "wild"].includes(tile.type)) return { ok: false, reason: "Pick a tile first." };
   const lines = getLinesForCell(cellId);
   const neighbors = getAdjacentOccupiedTiles(cellId);
-  if (!neighbors.length) return { ok: false, reason: "Place your tile directly next to an existing tile." };
+  const openBigXEnd = canPlaceAtOpenBigXEnd(tile, cellId);
+  if (!neighbors.length && !openBigXEnd) return { ok: false, reason: "Place your tile directly next to an existing tile." };
   if (tile.type === "wild") return { ok: true };
-  if (!neighbors.every((neighbor) => canTouch(tile, neighbor))) {
+  if (neighbors.length && !neighbors.every((neighbor) => canTouch(tile, neighbor))) {
     return { ok: false, reason: "Tiles can only touch the same number, or the next number up or down." };
   }
-  state.board[cellId] = tile;
-  const fits = lines.some((line) => {
-    const tiles = getLineTiles(line);
-    if (tiles.length < 2) return false;
-    return isPattern(tiles, line.cells.length);
-  });
-  state.board[cellId] = null;
+  const fits = lines.some((line) => lineFitsWithTile(line, tile, cellId));
   return fits ? { ok: true } : { ok: false, reason: "That tile must match the center line: same number or a sequence." };
+}
+
+function lineFitsWithTile(line, tile, cellId) {
+  state.board[cellId] = tile;
+  const fits = lineCanSupportPattern(line);
+  state.board[cellId] = null;
+  return fits;
+}
+
+function lineCanSupportPattern(line) {
+  const tiles = line.cells.map((id) => state.board[id]);
+  const known = tiles
+    .map((tile, index) => ({ tile, index }))
+    .filter(({ tile }) => tile && tile.type !== "wild");
+  if (known.length < 2) return false;
+  if (known.every(({ tile }) => tile.rank === known[0].tile.rank)) return true;
+  const ascendingStart = known[0].tile.rank - known[0].index;
+  const canAscend = known.every(({ tile, index }) => Number(tile.rank) - index === ascendingStart);
+  if (canAscend && ascendingStart >= 1 && ascendingStart + line.cells.length - 1 <= Number(RANKS.at(-1))) return true;
+  const descendingStart = Number(known[0].tile.rank) + known[0].index;
+  const canDescend = known.every(({ tile, index }) => Number(tile.rank) + index === descendingStart);
+  return canDescend && descendingStart <= Number(RANKS.at(-1)) && descendingStart - line.cells.length + 1 >= 1;
+}
+
+function canPlaceAtOpenBigXEnd(tile, cellId) {
+  const cell = getCellDef(cellId);
+  if (!cell || cell.xType !== "super" || !cell.pos.endsWith("-far")) return false;
+  return getLinesForCell(cellId).some((line) => {
+    const hasAnchor = line.cells.some((id) => id !== cellId && state.board[id]);
+    return hasAnchor && lineFitsWithTile(line, tile, cellId);
+  });
 }
 
 function selectRackTile(tileId) {
@@ -1013,7 +1033,7 @@ function evaluatePlacement(team, tile, cellId) {
   value += cell.center ? 3 : 1;
   getLinesForCell(cellId).forEach((line) => {
     const tiles = getLineTiles(line);
-    if (tiles.every((item) => item.color === team) && isPattern(tiles, line.cells.length)) value += tiles.length * 4;
+    if (tiles.every((item) => item.color === team) && lineCanSupportPattern(line)) value += tiles.length * 4;
   });
   state.board[cellId] = null;
   return value;
