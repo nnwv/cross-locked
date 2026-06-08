@@ -270,17 +270,14 @@ function seedCenters() {
   const smallCenters = shuffle(X_DEFS.filter((x) => x.type === "small").map((x) => x.cells.find((cell) => cell.center).id));
   const redSmallCount = Math.ceil(smallCenters.length / 2);
   smallCenters.slice(0, redSmallCount).forEach((cellId) => {
-    state.board[cellId] = makeTile("red", randomCenterRank(), true);
-    deals.push({ tile: state.board[cellId], cellId });
+    deals.push({ tile: makeTile("red", randomCenterRank(), true), cellId });
   });
   smallCenters.slice(redSmallCount).forEach((cellId) => {
-    state.board[cellId] = makeTile("blue", randomCenterRank(), true);
-    deals.push({ tile: state.board[cellId], cellId });
+    deals.push({ tile: makeTile("blue", randomCenterRank(), true), cellId });
   });
   const superCenter = getXDef("super").cells.find((cell) => cell.center).id;
   const superColor = state.round === 2 ? "blue" : "red";
-  state.board[superCenter] = makeTile(superColor, randomCenterRank(), true);
-  deals.push({ tile: state.board[superCenter], cellId: superCenter });
+  deals.push({ tile: makeTile(superColor, randomCenterRank(), true), cellId: superCenter });
   return deals;
 }
 
@@ -564,16 +561,6 @@ function animateCpuTileToBoard(tileId) {
 }
 
 function resolvePostPlacement(color, cellId) {
-  const x = getXDef(getCellDef(cellId).xId);
-  if (xQualifiesForTeam(x, color)) {
-    scoreAndResetX(color, x, () => {
-      resolveFreshDraw(color);
-      if (color === "blue" && state.turn === "blue" && state.phase === "cpu") {
-        state.cpuTimer = window.setTimeout(cpuStep, 650);
-      }
-    });
-    return;
-  }
   resolveFreshDraw(color);
 }
 
@@ -890,32 +877,45 @@ function getTileBagRect() {
 
 function animateOpeningDeal(boardDeals, rackDeals) {
   const fromRect = getTileBagRect();
-  if (!fromRect) return;
+  if (!fromRect) {
+    boardDeals.forEach((deal) => {
+      state.board[deal.cellId] = deal.tile;
+    });
+    render();
+    return;
+  }
   const deals = [
     ...boardDeals.map((deal) => ({
       tile: deal.tile,
-      target: document.querySelector(`.cell[data-cell="${deal.cellId}"]`),
-      className: "board-deal-land"
+      getTarget: () => document.querySelector(`.cell[data-cell="${deal.cellId}"]`),
+      className: "board-deal-land",
+      onLand: () => {
+        state.board[deal.cellId] = deal.tile;
+        render();
+        return document.querySelector(`.cell[data-cell="${deal.cellId}"]`);
+      }
     })),
     ...rackDeals.map((tile) => ({
       tile,
-      target: document.querySelector(`.rack-slot[data-rank="${tile.rank}"]`),
+      getTarget: () => document.querySelector(`.rack-slot[data-rank="${tile.rank}"]`),
       className: "rack-landed"
     }))
-  ].filter((deal) => deal.target);
+  ];
   deals.forEach((deal, index) => {
     window.setTimeout(() => {
+      const target = deal.getTarget();
+      if (!target) return;
       els.tileBag?.classList.remove("bag-pop");
       if (els.tileBag) {
         void els.tileBag.offsetWidth;
         els.tileBag.classList.add("bag-pop");
       }
-      animateTileFromBag(deal.tile, deal.target, deal.className);
+      animateTileFromBag(deal.tile, target, deal.className, deal.onLand);
     }, index * 85);
   });
 }
 
-function animateTileFromBag(tile, target, landedClass) {
+function animateTileFromBag(tile, target, landedClass, onLand = null) {
   const fromRect = els.tileBag?.getBoundingClientRect();
   const toRect = target?.getBoundingClientRect();
   if (!fromRect || !toRect) return;
@@ -939,8 +939,10 @@ function animateTileFromBag(tile, target, landedClass) {
   );
   animation.onfinish = () => {
     flyer.remove();
-    target.classList.add(landedClass);
-    window.setTimeout(() => target.classList.remove(landedClass), 430);
+    const landedTarget = onLand?.() || target;
+    if (!landedTarget) return;
+    landedTarget.classList.add(landedClass);
+    window.setTimeout(() => landedTarget.classList.remove(landedClass), 430);
   };
 }
 
