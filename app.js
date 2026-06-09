@@ -117,6 +117,8 @@ const state = {
   bombChance: BASE_BOMB_CHANCE,
   bomb: null,
   scoringX: null,
+  celebratingX: null,
+  cpuThinkingCells: [],
   cpuTimer: null
 };
 
@@ -129,6 +131,7 @@ const els = {
   roundLabel: document.querySelector("#roundLabel"),
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
+  riskPips: document.querySelector("#riskPips"),
   drawPlayBtn: document.querySelector("#drawPlayBtn"),
   endTurnBtn: document.querySelector("#endTurnBtn"),
   rulesDialog: document.querySelector("#rulesDialog"),
@@ -249,6 +252,8 @@ function setupRound() {
   state.board = {};
   state.bomb = null;
   state.scoringX = null;
+  state.celebratingX = null;
+  state.cpuThinkingCells = [];
   X_DEFS.flatMap((x) => x.cells).forEach((cell) => {
     state.board[cell.id] = null;
   });
@@ -443,6 +448,19 @@ function canPlaceAtOpenBigXEnd(tile, cellId) {
   });
 }
 
+function getPlacementPreview(tile, cellId, team = "red") {
+  if (!tile || !canPlaceTile(tile, cellId).ok) return null;
+  const before = scoreRound()[team].total;
+  const placedTile = resolveWildForPlacement(tile, cellId, team);
+  state.board[cellId] = placedTile;
+  const after = scoreRound()[team].total;
+  state.board[cellId] = null;
+  return {
+    tile: placedTile,
+    delta: Math.max(0, after - before)
+  };
+}
+
 function selectRackTile(tileId) {
   if (state.turn !== "red" || state.phase !== "playing") return;
   const tile = state.racks.red.find((item) => item.id === tileId);
@@ -460,17 +478,32 @@ function placeSelectedTile(cellId) {
     setStatus(result.reason);
     return;
   }
-  const fromRect = document.querySelector(`[data-tile="${tile.id}"]`)?.getBoundingClientRect();
+  const fromRect = getRackTileRect(tile);
+  markRackTileLeaving(tile);
   placeTile("red", tile, cellId);
   state.selectedTileId = null;
   state.chain += 1;
   state.phase = "placing";
   state.turnSnapshot = createTurnSnapshot();
   render();
-  animateTileToBoard(tile.id, fromRect);
+  animateTileToBoard(tile, fromRect);
   window.setTimeout(() => {
     resolvePlacedWild("red", cellId, () => resolvePostPlacement("red", cellId));
   }, 340);
+}
+
+function getRackTileRect(tile) {
+  return els.rack.querySelector(`[data-tile="${tile.id}"]`)?.getBoundingClientRect()
+    || els.rack.querySelector(`.rack-slot[data-rank="${tile.rank}"]`)?.getBoundingClientRect();
+}
+
+function markRackTileLeaving(tile) {
+  const rackTile = els.rack.querySelector(`[data-tile="${tile.id}"]`)
+    || els.rack.querySelector(`.rack-slot[data-rank="${tile.rank}"]`);
+  if (!rackTile) return;
+  rackTile.classList.remove("rack-leaving");
+  void rackTile.offsetWidth;
+  rackTile.classList.add("rack-leaving");
 }
 
 function placeTile(color, tile, cellId) {
@@ -501,25 +534,29 @@ function resolvePlacedWild(color, cellId, next) {
   }, 180);
 }
 
-function animateTileToBoard(tileId, fromRect) {
+function animateTileToBoard(tile, fromRect) {
   if (!fromRect) return;
-  const target = document.querySelector(`.cell [data-tile="${tileId}"]`);
+  const target = document.querySelector(`.cell [data-tile="${tile.id}"]`);
   if (!target) return;
   const toRect = target.getBoundingClientRect();
-  const flyer = target.cloneNode(true);
-  flyer.classList.add("tile-flyer");
-  flyer.style.left = `${fromRect.left}px`;
-  flyer.style.top = `${fromRect.top}px`;
-  flyer.style.width = `${fromRect.width}px`;
-  flyer.style.height = `${fromRect.height}px`;
+  const flyer = renderTile(tile, false);
+  flyer.classList.add("tile-flyer", "rack-place-flyer");
+  const startSize = Math.min(fromRect.width, fromRect.height, toRect.width);
+  const startX = fromRect.left + fromRect.width / 2 - startSize / 2;
+  const startY = fromRect.top + fromRect.height / 2 - startSize / 2;
+  flyer.style.left = `${startX}px`;
+  flyer.style.top = `${startY}px`;
+  flyer.style.width = `${startSize}px`;
+  flyer.style.height = `${startSize}px`;
   document.body.append(flyer);
   target.style.visibility = "hidden";
   const animation = flyer.animate(
     [
-      { transform: "translate(0, 0) scale(1)", opacity: 0.98 },
-      { transform: `translate(${toRect.left - fromRect.left}px, ${toRect.top - fromRect.top}px) scale(${toRect.width / fromRect.width}, ${toRect.height / fromRect.height})`, opacity: 1 }
+      { transform: "translate(0, 0) scale(1)", opacity: 1 },
+      { transform: "translate(0, -18px) scale(1.08)", opacity: 1, offset: 0.22 },
+      { transform: `translate(${toRect.left + toRect.width / 2 - (startX + startSize / 2)}px, ${toRect.top + toRect.height / 2 - (startY + startSize / 2)}px) scale(${toRect.width / startSize})`, opacity: 1 }
     ],
-    { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" }
+    { duration: 430, easing: "cubic-bezier(.18,.82,.2,1)" }
   );
   animation.onfinish = () => {
     flyer.remove();
@@ -561,7 +598,33 @@ function animateCpuTileToBoard(tileId) {
 }
 
 function resolvePostPlacement(color, cellId) {
+  const celebration = getCompletedXCelebration(color, cellId);
+  if (celebration) {
+    state.celebratingX = celebration;
+    state.lastEvent = `${TEAM_LABEL[color]} completed a ${celebration.label} for ${celebration.points}.`;
+    setStatus(state.lastEvent);
+    render();
+    window.setTimeout(() => {
+      if (state.celebratingX?.xId === celebration.xId) {
+        state.celebratingX = null;
+        render();
+      }
+      resolveFreshDraw(color);
+    }, 760);
+    return;
+  }
   resolveFreshDraw(color);
+}
+
+function getCompletedXCelebration(color, cellId) {
+  const x = getXDef(getCellDef(cellId).xId);
+  if (!x || !xQualifiesForTeam(x, color)) return null;
+  return {
+    xId: x.id,
+    color,
+    points: x.type === "super" ? 200 : 100,
+    label: x.type === "super" ? "Big X" : "Small X"
+  };
 }
 
 function scoreAndResetX(color, x, next) {
@@ -603,6 +666,9 @@ function startHumanTurn() {
   setStatus("Place one tile, or end your turn. Each placement earns a fresh draw.");
   render();
   animateDrawToRack(tile, fromRect);
+  window.setTimeout(() => {
+    if (state.turn === "red" && state.phase === "playing") checkHumanPlayableTiles();
+  }, 460);
 }
 
 function createTurnSnapshot() {
@@ -620,6 +686,7 @@ function endHumanTurn() {
 
 function passTurnTo(nextTeam, eventText) {
   state.selectedTileId = null;
+  state.cpuThinkingCells = [];
   state.chain = 0;
   state.turnSnapshot = null;
   state.turn = nextTeam;
@@ -652,6 +719,7 @@ function resolveFreshDraw(color) {
           state.phase = "playing";
           setStatus(`Fresh tile added. Bomb risk is now ${state.bombChance}%. Place another tile, or end your turn.`);
           render();
+          checkHumanPlayableTiles();
         }
       }, 430);
     }
@@ -659,6 +727,27 @@ function resolveFreshDraw(color) {
   }
   const bombColor = event === "redBomb" ? "red" : "blue";
   triggerBomb(color, bombColor);
+}
+
+function hasPlayableTile(color) {
+  const openCells = Object.keys(state.board).filter((cellId) => !state.board[cellId]);
+  return state.racks[color].some((tile) => openCells.some((cellId) => canPlaceTile(tile, cellId).ok));
+}
+
+function checkHumanPlayableTiles() {
+  if (state.turn !== "red" || state.phase !== "playing") return false;
+  if (hasPlayableTile("red")) return true;
+  state.selectedTileId = null;
+  setStatus("No playable tiles. Your turn ends.");
+  render();
+  showMessage({
+    eyebrow: "No playable tiles",
+    title: "Turn passes to Blue",
+    body: "None of your rack tiles can legally fit on the board right now.",
+    actionText: "Continue",
+    onAction: () => passTurnTo("blue", "No playable red tiles. Blue CPU takes the turn.")
+  });
+  return false;
 }
 
 function pickFreshEvent() {
@@ -1000,6 +1089,17 @@ function cpuStep() {
     passTurnTo("red", "Blue CPU ended its turn.");
     return;
   }
+  state.cpuThinkingCells = getCpuThinkingCells(best.cellId);
+  setStatus("Blue CPU is choosing a spot.");
+  render();
+  state.cpuTimer = window.setTimeout(() => {
+    commitCpuPlacement(best);
+  }, 460);
+}
+
+function commitCpuPlacement(best) {
+  if (state.phase !== "cpu" || state.turn !== "blue") return;
+  state.cpuThinkingCells = [];
   placeTile("blue", best.tile, best.cellId);
   state.chain += 1;
   state.lastEvent = `Blue CPU placed ${best.tile.rank}.`;
@@ -1013,6 +1113,17 @@ function cpuStep() {
       }
     });
   }, 640);
+}
+
+function getCpuThinkingCells(bestCellId) {
+  const options = [bestCellId];
+  const openCells = shuffle(Object.keys(state.board).filter((cellId) => !state.board[cellId] && cellId !== bestCellId));
+  openCells.some((cellId) => {
+    if (options.length >= 3) return true;
+    if (state.racks.blue.some((tile) => canPlaceTile(tile, cellId).ok)) options.push(cellId);
+    return false;
+  });
+  return options;
 }
 
 function findBestPlacement(team) {
@@ -1121,6 +1232,18 @@ function render() {
   renderBoard();
   renderRack();
   renderHud();
+  renderRiskMeter();
+}
+
+function renderRiskMeter() {
+  if (!els.riskPips) return;
+  els.riskPips.innerHTML = "";
+  const active = Math.max(1, Math.ceil(((state.bombChance - BASE_BOMB_CHANCE) / (MAX_BOMB_CHANCE - BASE_BOMB_CHANCE || 1)) * 5));
+  for (let index = 1; index <= 5; index += 1) {
+    const pip = document.createElement("span");
+    pip.className = index <= active ? "active" : "";
+    els.riskPips.append(pip);
+  }
 }
 
 function renderBoard() {
@@ -1128,6 +1251,9 @@ function renderBoard() {
   els.board.classList.toggle("bomb-active", Boolean(state.bomb));
   els.board.classList.toggle("bomb-red", state.bomb?.color === "red");
   els.board.classList.toggle("bomb-blue", state.bomb?.color === "blue");
+  const selected = state.turn === "red" && state.phase === "playing"
+    ? state.racks.red.find((item) => item.id === state.selectedTileId)
+    : null;
   X_DEFS.forEach((x) => {
     x.cells.forEach((cell) => {
       const origin = BOARD_ORIGINS[x.id];
@@ -1144,12 +1270,31 @@ function renderBoard() {
       if (cell.center) cellEl.classList.add("center-cell");
       const tile = state.board[cell.id];
       const isScoringCell = state.scoringX?.xId === x.id;
+      const isCelebratingCell = state.celebratingX?.xId === x.id;
       if (isScoringCell) {
         cellEl.classList.add("x-scoring", state.scoringX.color);
       }
-      if (!tile && state.turn === "red" && state.phase === "playing") {
-        const selected = state.racks.red.find((item) => item.id === state.selectedTileId);
-        if (selected && canPlaceTile(selected, cell.id).ok) cellEl.classList.add("selectable");
+      if (isCelebratingCell) {
+        cellEl.classList.add("x-complete", state.celebratingX.color);
+      }
+      if (state.cpuThinkingCells.includes(cell.id)) {
+        cellEl.classList.add("cpu-thinking");
+      }
+      if (!tile && selected) {
+        const preview = getPlacementPreview(selected, cell.id, "red");
+        if (preview) {
+          cellEl.classList.add("selectable", "has-preview");
+          const ghost = renderTile(preview.tile, false);
+          ghost.classList.add("ghost-tile");
+          delete ghost.dataset.tile;
+          cellEl.append(ghost);
+          if (preview.delta > 0) {
+            const badge = document.createElement("span");
+            badge.className = "score-preview";
+            badge.textContent = `+${preview.delta}`;
+            cellEl.append(badge);
+          }
+        }
       }
       if (tile) {
         cellEl.classList.add(tile.seeded ? "seeded" : "filled");
@@ -1218,9 +1363,10 @@ function renderHud() {
   if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red tile.");
   if (state.phase === "drawing") setStatus("Drawing...");
   if (state.phase === "placing") setStatus("Tile placed. Drawing automatically.");
-  if (state.phase === "cpu") setStatus("Blue CPU is taking its turn.");
+  if (state.phase === "cpu") setStatus(state.cpuThinkingCells.length ? "Blue CPU is choosing a spot." : "Blue CPU is taking its turn.");
   if (state.phase === "bombing") setStatus(state.bomb?.message || "Bomb is resolving.");
   if (state.phase === "scoring" && state.scoringX) setStatus(`${TEAM_LABEL[state.scoringX.color]} scores ${state.scoringX.points}. Resetting that X.`);
+  if (state.celebratingX) setStatus(`${TEAM_LABEL[state.celebratingX.color]} completed a ${state.celebratingX.label} for ${state.celebratingX.points}.`);
 }
 
 function updateScoreBox(el, team, value) {

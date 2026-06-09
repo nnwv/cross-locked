@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f5f5f7">
     <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=20260608-rules-example">
+    <link rel="stylesheet" href="styles.css?v=20260609-living-bag">
   </head>
   <body>
     <div class="app-shell">
@@ -42,6 +42,10 @@
                 <h2 id="turnTitle">Your turn</h2>
               </div>
               <p id="statusText" class="status-text">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</p>
+              <div class="risk-meter" aria-label="Bomb risk">
+                <span>Bomb Risk</span>
+                <div id="riskPips" class="risk-pips" aria-hidden="true"></div>
+              </div>
               <div class="turn-actions">
                 <button id="drawPlayBtn" class="primary">Draw</button>
                 <button id="endTurnBtn" disabled>End Turn</button>
@@ -75,6 +79,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260608-rules-example"></script>
+    <script src="app.js?v=20260609-living-bag"></script>
   </body>
 </html>
