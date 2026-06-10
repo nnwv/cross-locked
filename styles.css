@@ -616,34 +616,6 @@ h2 {
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.11);
 }
 
-.cell.has-preview {
-  overflow: visible;
-}
-
-.cell .ghost-tile {
-  opacity: 0.34;
-  filter: saturate(0.88);
-  transform: scale(0.92);
-  animation: ghostTilePulse 1.15s ease-in-out infinite;
-}
-
-.score-preview {
-  position: absolute;
-  right: -10px;
-  top: -11px;
-  z-index: 8;
-  min-width: 34px;
-  padding: 5px 7px;
-  border-radius: 999px;
-  color: white;
-  background: linear-gradient(180deg, #1aa98d, #0f6f5d);
-  box-shadow: 0 10px 22px rgba(15, 111, 93, 0.28);
-  font-size: clamp(0.6rem, calc(var(--socket-size) * 0.18), 0.78rem);
-  font-weight: 820;
-  line-height: 1;
-  pointer-events: none;
-}
-
 .cell.cpu-thinking {
   z-index: 5;
   border-color: rgba(23, 104, 194, 0.72);
@@ -721,17 +693,6 @@ h2 {
   100% {
     transform: scale(0.72);
     opacity: 0.18;
-  }
-}
-
-@keyframes ghostTilePulse {
-  0%, 100% {
-    opacity: 0.28;
-    transform: scale(0.9);
-  }
-  50% {
-    opacity: 0.45;
-    transform: scale(0.96);
   }
 }
 

@@ -448,19 +448,6 @@ function canPlaceAtOpenBigXEnd(tile, cellId) {
   });
 }
 
-function getPlacementPreview(tile, cellId, team = "red") {
-  if (!tile || !canPlaceTile(tile, cellId).ok) return null;
-  const before = scoreRound()[team].total;
-  const placedTile = resolveWildForPlacement(tile, cellId, team);
-  state.board[cellId] = placedTile;
-  const after = scoreRound()[team].total;
-  state.board[cellId] = null;
-  return {
-    tile: placedTile,
-    delta: Math.max(0, after - before)
-  };
-}
-
 function selectRackTile(tileId) {
   if (state.turn !== "red" || state.phase !== "playing") return;
   const tile = state.racks.red.find((item) => item.id === tileId);
@@ -1281,20 +1268,7 @@ function renderBoard() {
         cellEl.classList.add("cpu-thinking");
       }
       if (!tile && selected) {
-        const preview = getPlacementPreview(selected, cell.id, "red");
-        if (preview) {
-          cellEl.classList.add("selectable", "has-preview");
-          const ghost = renderTile(preview.tile, false);
-          ghost.classList.add("ghost-tile");
-          delete ghost.dataset.tile;
-          cellEl.append(ghost);
-          if (preview.delta > 0) {
-            const badge = document.createElement("span");
-            badge.className = "score-preview";
-            badge.textContent = `+${preview.delta}`;
-            cellEl.append(badge);
-          }
-        }
+        if (canPlaceTile(selected, cell.id).ok) cellEl.classList.add("selectable");
       }
       if (tile) {
         cellEl.classList.add(tile.seeded ? "seeded" : "filled");
