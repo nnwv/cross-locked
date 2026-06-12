@@ -271,7 +271,7 @@ function setupRound() {
   render();
   animateOpeningDeal(boardDeals, redRackDeals);
   if (state.turn === "blue") {
-    state.cpuTimer = window.setTimeout(runCpuTurn, 1900);
+    state.cpuTimer = window.setTimeout(runCpuTurn, 1450);
   }
 }
 
@@ -592,6 +592,7 @@ function animateCpuTileToBoard(tileId) {
 function resolvePostPlacement(color, cellId) {
   const celebration = getCompletedXCelebration(color, cellId);
   if (celebration) {
+    state.phase = "celebrating";
     state.celebratingX = celebration;
     state.lastEvent = `${TEAM_LABEL[color]} completed a ${celebration.label} for ${celebration.points}.`;
     setStatus(state.lastEvent);
@@ -601,7 +602,11 @@ function resolvePostPlacement(color, cellId) {
         state.celebratingX = null;
         render();
       }
+      state.phase = color === "red" ? "placing" : "cpu";
       resolveFreshDraw(color);
+      if (color === "blue" && state.turn === "blue" && state.phase === "cpu") {
+        state.cpuTimer = window.setTimeout(cpuStep, 380);
+      }
     }, 760);
     return;
   }
@@ -687,7 +692,7 @@ function passTurnTo(nextTeam, eventText) {
   state.lastEvent = eventText;
   if (checkRoundEnd()) return;
   render();
-  if (nextTeam === "blue") state.cpuTimer = window.setTimeout(runCpuTurn, 650);
+  if (nextTeam === "blue") state.cpuTimer = window.setTimeout(runCpuTurn, 420);
 }
 
 function resolveFreshDraw(color) {
@@ -813,6 +818,18 @@ function createBombBurst(cellId, color) {
   window.setTimeout(() => burst.remove(), 820);
 }
 
+function getBombMissCell() {
+  const emptyCells = Object.keys(state.board).filter((cellId) => !state.board[cellId]);
+  return shuffle(emptyCells).find((cellId) => document.querySelector(`[data-cell="${cellId}"]`)) || null;
+}
+
+function showBombMiss(cellId, color) {
+  const cell = document.querySelector(`[data-cell="${cellId}"]`);
+  if (!cell) return;
+  cell.classList.add("bomb-miss", color);
+  window.setTimeout(() => cell.classList.remove("bomb-miss", color), 760);
+}
+
 function createBombIcon(color) {
   const icon = document.createElement("div");
   icon.className = `bomb-icon ${color}`;
@@ -832,9 +849,12 @@ function animateBombIconToTargets(color, fromRect, targets, onDone) {
   const startX = (bagMouth || startRect).left + (bagMouth || startRect).width / 2;
   const startY = bagMouth ? bagMouth.top + bagMouth.height / 2 : startRect.top + startRect.height * 0.24;
   if (!targets.length) {
+    const missCellId = getBombMissCell();
+    const missCell = missCellId ? document.querySelector(`[data-cell="${missCellId}"]`) : null;
     const icon = createPositionedBombIcon(color, startX, startY, size);
-    const targetRect = fallbackRect || startRect;
+    const targetRect = missCell?.getBoundingClientRect() || fallbackRect || startRect;
     flyBombIcon(icon, startX, startY, targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, true, () => {
+      if (missCellId) showBombMiss(missCellId, color);
       icon.classList.add("bomb-icon-fade");
       window.setTimeout(() => {
         icon.remove();
@@ -1071,7 +1091,7 @@ function runCpuTurn() {
   state.racks.blue.push(tile);
   state.lastEvent = `Blue CPU drew ${describeTile(tile)}.`;
   render();
-  state.cpuTimer = window.setTimeout(cpuStep, 520);
+  state.cpuTimer = window.setTimeout(cpuStep, 320);
 }
 
 function cpuStep() {
@@ -1086,7 +1106,7 @@ function cpuStep() {
   render();
   state.cpuTimer = window.setTimeout(() => {
     commitCpuPlacement(best);
-  }, 460);
+  }, 260);
 }
 
 function commitCpuPlacement(best) {
@@ -1101,10 +1121,10 @@ function commitCpuPlacement(best) {
     resolvePlacedWild("blue", best.cellId, () => {
       resolvePostPlacement("blue", best.cellId);
       if (state.turn === "blue" && state.phase === "cpu") {
-        state.cpuTimer = window.setTimeout(cpuStep, 650);
+        state.cpuTimer = window.setTimeout(cpuStep, 380);
       }
     });
-  }, 640);
+  }, 460);
 }
 
 function getCpuThinkingCells(bestCellId) {

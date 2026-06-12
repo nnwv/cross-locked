@@ -826,6 +826,16 @@ h2 {
   animation: bombBadge 900ms ease forwards;
 }
 
+.cell.bomb-miss {
+  z-index: 4;
+  border-color: rgba(29, 29, 31, 0.68);
+  animation: bombMissCell 760ms ease forwards;
+}
+
+.cell.bomb-miss.blue {
+  border-color: rgba(23, 104, 194, 0.72);
+}
+
 @keyframes bombTargetPulse {
   0% {
     transform: scale(1);
@@ -842,6 +852,21 @@ h2 {
   100% {
     transform: scale(0.82);
     opacity: 0.24;
+    box-shadow: 0 0 0 14px rgba(29, 29, 31, 0);
+  }
+}
+
+@keyframes bombMissCell {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(29, 29, 31, 0);
+  }
+  30% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 6px rgba(255, 204, 0, 0.22);
+  }
+  100% {
+    transform: scale(1);
     box-shadow: 0 0 0 14px rgba(29, 29, 31, 0);
   }
 }
