@@ -128,6 +128,7 @@ const els = {
   rack: document.querySelector("#rack"),
   redScore: document.querySelector("#redScore"),
   blueScore: document.querySelector("#blueScore"),
+  highScore: document.querySelector("#highScore"),
   roundLabel: document.querySelector("#roundLabel"),
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
@@ -185,7 +186,11 @@ function shuffle(list) {
 
 function loadRecords() {
   try {
-    return JSON.parse(localStorage.getItem("crossLockedLiteRecords")) || { highGame: 0, largestMargin: 0 };
+    const records = JSON.parse(localStorage.getItem("crossLockedLiteRecords")) || {};
+    return {
+      highGame: Number(records.highGame) || 0,
+      largestMargin: Number(records.largestMargin) || 0
+    };
   } catch {
     return { highGame: 0, largestMargin: 0 };
   }
@@ -1177,9 +1182,8 @@ function checkRoundEnd() {
 }
 
 function finishGame(roundScore, endedRound) {
-  const total = state.scores.red + state.scores.blue;
   const margin = Math.abs(state.scores.red - state.scores.blue);
-  state.records.highGame = Math.max(state.records.highGame, total);
+  state.records.highGame = Math.max(state.records.highGame, state.scores.red);
   state.records.largestMargin = Math.max(state.records.largestMargin, margin);
   saveRecords();
   state.phase = "gameOver";
@@ -1328,6 +1332,7 @@ function renderHud() {
   updateScoreBox(els.blueScore, "blue", state.scores.blue + liveRoundScore.blue.total);
   els.redScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
   els.blueScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
+  els.highScore.textContent = state.records.highGame;
   els.roundLabel.textContent = `${state.round}/${TOTAL_ROUNDS}`;
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";

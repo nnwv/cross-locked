@@ -145,7 +145,8 @@ h2 {
 }
 
 .score-pill,
-.round-pill {
+.round-pill,
+.high-pill {
   position: relative;
   border: 1px solid var(--hairline);
   border-radius: 8px;
@@ -156,7 +157,8 @@ h2 {
 }
 
 .score-pill span,
-.round-pill span {
+.round-pill span,
+.high-pill span {
   display: block;
   color: var(--muted);
   font-size: 0.68rem;
@@ -165,7 +167,8 @@ h2 {
 }
 
 .score-pill strong,
-.round-pill strong {
+.round-pill strong,
+.high-pill strong {
   display: block;
   margin-top: 3px;
   font-size: 1.24rem;
@@ -179,6 +182,21 @@ h2 {
 
 .score-pill.blue strong {
   color: var(--blue);
+}
+
+.high-pill strong {
+  color: var(--accent);
+}
+
+.rack-high-pill {
+  justify-self: center;
+  width: 64px;
+  padding: 8px 7px;
+  text-align: center;
+}
+
+.rack-high-pill strong {
+  font-size: 1.08rem;
 }
 
 .score-pill.active-turn {
@@ -1240,7 +1258,7 @@ h2 {
 
 .rack-card {
   display: grid;
-  grid-template-columns: 74px max-content max-content;
+  grid-template-columns: 64px 74px max-content 276px;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -1255,6 +1273,7 @@ h2 {
 
 .rack-turn-card {
   justify-self: center;
+  width: 276px;
   margin-top: 0;
   padding: 8px 9px;
   border: 0;
@@ -1742,12 +1761,18 @@ li {
     min-height: 0;
   }
 
+  .rack-high-pill {
+    justify-self: stretch;
+    width: auto;
+  }
+
   .rack {
     justify-self: stretch;
     width: auto;
   }
 
   .rack-turn-card {
+    width: auto;
     border-left: 0;
     border-top: 1px solid rgba(0, 0, 0, 0.08);
   }
@@ -1777,7 +1802,8 @@ li {
   }
 
   .score-pill,
-  .round-pill {
+  .round-pill,
+  .high-pill {
     padding: 10px;
   }
 
@@ -1844,12 +1870,18 @@ li {
     min-height: 0;
   }
 
+  .rack-high-pill {
+    justify-self: stretch;
+    width: auto;
+  }
+
   .rack {
     justify-self: stretch;
     width: auto;
   }
 
   .rack-turn-card {
+    width: auto;
     border-left: 0;
     border-top: 1px solid rgba(0, 0, 0, 0.08);
   }
