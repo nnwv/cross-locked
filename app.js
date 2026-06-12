@@ -89,10 +89,10 @@ const LINE_DEFS = X_DEFS.flatMap((x) => {
 });
 
 const BOARD_ORIGINS = {
-  "north-west": { col: 0, row: 3 },
-  "north-east": { col: 10, row: 3 },
-  "south-west": { col: 0, row: 9 },
-  "south-east": { col: 10, row: 9 },
+  "north-west": { col: 0, row: 2 },
+  "north-east": { col: 10, row: 2 },
+  "south-west": { col: 0, row: 10 },
+  "south-east": { col: 10, row: 10 },
   super: { col: 4, row: 5 }
 };
 
