@@ -89,11 +89,11 @@ const LINE_DEFS = X_DEFS.flatMap((x) => {
 });
 
 const BOARD_ORIGINS = {
-  "north-west": { col: 0, row: 2 },
-  "north-east": { col: 10, row: 2 },
-  "south-west": { col: 0, row: 10 },
-  "south-east": { col: 10, row: 10 },
-  super: { col: 4, row: 5 }
+  "north-west": { col: 0, row: 1 },
+  "north-east": { col: 10, row: 1 },
+  "south-west": { col: 0, row: 9 },
+  "south-east": { col: 10, row: 9 },
+  super: { col: 4, row: 4 }
 };
 
 const state = {
@@ -126,10 +126,15 @@ const els = {
   board: document.querySelector("#board"),
   tileBag: document.querySelector("#tileBag"),
   rack: document.querySelector("#rack"),
-  redScore: document.querySelector("#redScore"),
-  blueScore: document.querySelector("#blueScore"),
+  redRound1Score: document.querySelector("#redRound1Score"),
+  blueRound1Score: document.querySelector("#blueRound1Score"),
+  redRound2Score: document.querySelector("#redRound2Score"),
+  blueRound2Score: document.querySelector("#blueRound2Score"),
+  redRound2Row: document.querySelector("#redRound2Row"),
+  blueRound2Row: document.querySelector("#blueRound2Row"),
+  redTotalScore: document.querySelector("#redTotalScore"),
+  blueTotalScore: document.querySelector("#blueTotalScore"),
   highScore: document.querySelector("#highScore"),
-  roundLabel: document.querySelector("#roundLabel"),
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
   riskPips: document.querySelector("#riskPips"),
@@ -144,6 +149,17 @@ const els = {
   messageBody: document.querySelector("#messageBody"),
   messageActionBtn: document.querySelector("#messageActionBtn")
 };
+
+function refreshBoardHudRefs() {
+  els.redRound1Score = document.querySelector("#redRound1Score");
+  els.blueRound1Score = document.querySelector("#blueRound1Score");
+  els.redRound2Score = document.querySelector("#redRound2Score");
+  els.blueRound2Score = document.querySelector("#blueRound2Score");
+  els.redRound2Row = document.querySelector("#redRound2Row");
+  els.blueRound2Row = document.querySelector("#blueRound2Row");
+  els.redTotalScore = document.querySelector("#redTotalScore");
+  els.blueTotalScore = document.querySelector("#blueTotalScore");
+}
 
 let pendingMessageAction = null;
 
@@ -557,7 +573,7 @@ function animateTileToBoard(tile, fromRect) {
 }
 
 function animateCpuTileToBoard(tileId) {
-  const fromRect = els.blueScore.closest(".score-pill")?.getBoundingClientRect();
+  const fromRect = getBlueScoreAnchorRect();
   const target = document.querySelector(`.cell [data-tile="${tileId}"]`);
   if (!fromRect || !target) return;
   const toRect = target.getBoundingClientRect();
@@ -935,7 +951,7 @@ function flyBombIcon(icon, fromX, fromY, toX, toY, appear, onFinish) {
 function showSpecialDraw(drawColor, tile, onDone) {
   state.phase = "drawing";
   const isBomb = tile.kind === "bomb";
-  const fromRect = getTileBagRect() || (drawColor === "red" ? els.drawPlayBtn : els.blueScore.closest(".score-pill"))?.getBoundingClientRect();
+  const fromRect = getTileBagRect() || (drawColor === "red" ? els.drawPlayBtn?.getBoundingClientRect() : getBlueScoreAnchorRect());
   const targetRect = document.querySelector(".rack-turn-card")?.getBoundingClientRect() || fromRect;
   if (!fromRect || !targetRect) {
     onDone();
@@ -974,6 +990,11 @@ function showSpecialDraw(drawColor, tile, onDone) {
 function getTileBagRect() {
   popTileBag();
   return els.tileBag?.getBoundingClientRect();
+}
+
+function getBlueScoreAnchorRect() {
+  return els.blueTotalScore?.closest(".score-team-card")?.getBoundingClientRect()
+    || els.board?.getBoundingClientRect();
 }
 
 function animateOpeningDeal(boardDeals, rackDeals) {
@@ -1347,13 +1368,21 @@ function renderTile(tile, asButton) {
 }
 
 function renderHud() {
-  const liveRoundScore = state.phase === "gameOver" || state.phase === "scoring" ? { red: { total: 0 }, blue: { total: 0 } } : scoreRound();
-  updateScoreBox(els.redScore, "red", state.scores.red + liveRoundScore.red.total);
-  updateScoreBox(els.blueScore, "blue", state.scores.blue + liveRoundScore.blue.total);
-  els.redScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
-  els.blueScore.closest(".score-pill")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
+  const roundScores = getDisplayedRoundScores();
+  const redTotal = roundScores[1].red + roundScores[2].red;
+  const blueTotal = roundScores[1].blue + roundScores[2].blue;
+  setScoreText(els.redRound1Score, roundScores[1].red);
+  setScoreText(els.blueRound1Score, roundScores[1].blue);
+  setScoreText(els.redRound2Score, roundScores[2].red);
+  setScoreText(els.blueRound2Score, roundScores[2].blue);
+  setScoreText(els.redTotalScore, redTotal);
+  setScoreText(els.blueTotalScore, blueTotal);
+  const showRoundTwo = state.round >= 2 || state.roundScores[2].red !== null || state.roundScores[2].blue !== null;
+  els.redRound2Row.hidden = !showRoundTwo;
+  els.blueRound2Row.hidden = !showRoundTwo;
+  document.querySelector(".score-team-card.red")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
+  document.querySelector(".score-team-card.blue")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
   els.highScore.textContent = state.records.highGame;
-  els.roundLabel.textContent = `${state.round}/${TOTAL_ROUNDS}`;
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
@@ -1366,6 +1395,31 @@ function renderHud() {
   if (state.phase === "bombing") setStatus(state.bomb?.message || "Bomb is resolving.");
   if (state.phase === "scoring" && state.scoringX) setStatus(`${TEAM_LABEL[state.scoringX.color]} scores ${state.scoringX.points}. Resetting that X.`);
   if (state.celebratingX) setStatus(`${TEAM_LABEL[state.celebratingX.color]} completed a ${state.celebratingX.label} for ${state.celebratingX.points}.`);
+}
+
+function getDisplayedRoundScores() {
+  const values = {
+    1: {
+      red: state.roundScores[1].red ?? 0,
+      blue: state.roundScores[1].blue ?? 0
+    },
+    2: {
+      red: state.roundScores[2].red ?? 0,
+      blue: state.roundScores[2].blue ?? 0
+    }
+  };
+  if (!["gameOver", "roundOver", "scoring"].includes(state.phase)) {
+    const liveRoundScore = scoreRound();
+    values[state.round] = {
+      red: state.roundBanked.red + liveRoundScore.red.total,
+      blue: state.roundBanked.blue + liveRoundScore.blue.total
+    };
+  }
+  return values;
+}
+
+function setScoreText(el, value) {
+  if (el) el.textContent = value;
 }
 
 function updateScoreBox(el, team, value) {

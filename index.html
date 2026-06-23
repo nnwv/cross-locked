@@ -6,24 +6,36 @@
     <meta name="theme-color" content="#f5f5f7">
     <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=20260612-bomb-whiff">
+    <link rel="stylesheet" href="styles.css?v=20260623-stable-score-grid">
   </head>
   <body>
     <div class="app-shell">
       <main class="game-layout">
         <section class="board-area" aria-label="Game board">
           <div class="board-hud" aria-label="Game score">
-            <div class="score-pill red">
+            <div class="score-team-card red">
               <span>Red</span>
-              <strong id="redScore">0</strong>
+              <strong id="redTotalScore">0</strong>
+              <div class="score-round-row">
+                <b>Round 1</b>
+                <em id="redRound1Score">0</em>
+              </div>
+              <div id="redRound2Row" class="score-round-row">
+                <b>Round 2</b>
+                <em id="redRound2Score">0</em>
+              </div>
             </div>
-            <div class="round-pill">
-              <span>Round</span>
-              <strong id="roundLabel">1/2</strong>
-            </div>
-            <div class="score-pill blue">
+            <div class="score-team-card blue">
               <span>Blue CPU</span>
-              <strong id="blueScore">0</strong>
+              <strong id="blueTotalScore">0</strong>
+              <div class="score-round-row">
+                <b>Round 1</b>
+                <em id="blueRound1Score">0</em>
+              </div>
+              <div id="blueRound2Row" class="score-round-row">
+                <b>Round 2</b>
+                <em id="blueRound2Score">0</em>
+              </div>
             </div>
           </div>
           <div id="board" class="board"></div>
@@ -32,7 +44,7 @@
         <aside class="side-panel" aria-label="Turn controls">
           <section class="rack-card">
             <div class="high-pill rack-high-pill">
-              <span>High</span>
+              <span>High Score</span>
               <strong id="highScore">0</strong>
             </div>
             <div id="tileBag" class="tile-bag" aria-label="Tile bag">
@@ -41,11 +53,10 @@
             </div>
             <div id="rack" class="rack" aria-label="Player rack"></div>
             <section class="turn-card rack-turn-card">
-              <div>
-                <p class="kicker">Current Turn</p>
+              <div class="turn-copy">
                 <h2 id="turnTitle">Your turn</h2>
+                <p id="statusText" class="status-text">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</p>
               </div>
-              <p id="statusText" class="status-text">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</p>
               <div class="risk-meter" aria-label="Bomb risk">
                 <span>Bomb Risk</span>
                 <div id="riskPips" class="risk-pips" aria-hidden="true"></div>
@@ -84,6 +95,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260612-bomb-whiff"></script>
+    <script src="app.js?v=20260623-stable-score-grid"></script>
   </body>
 </html>
