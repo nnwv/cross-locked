@@ -6,6 +6,11 @@ const BOMB_CHANCE_STEP = 4;
 const MAX_BOMB_CHANCE = 28;
 const WILD_DRAW_CHANCE = 12;
 const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
+const CPU_PASS_CHANCE = {
+  behind: 0.01,
+  close: 0.06,
+  ahead: 0.2
+};
 
 const X_DEFS = [
   {
@@ -1118,7 +1123,7 @@ function runCpuTurn() {
 function cpuStep() {
   if (state.phase !== "cpu" || state.turn !== "blue") return;
   const best = findBestPlacement("blue");
-  if (!best || (state.chain > 0 && Math.random() < 0.22)) {
+  if (!best || (state.chain > 0 && Math.random() < getCpuPassChance())) {
     passTurnTo("red", "Blue CPU ended its turn.");
     return;
   }
@@ -1128,6 +1133,16 @@ function cpuStep() {
   state.cpuTimer = window.setTimeout(() => {
     commitCpuPlacement(best);
   }, 260);
+}
+
+function getCpuPassChance() {
+  const liveScore = scoreRound();
+  const redTotal = state.scores.red + liveScore.red.total;
+  const blueTotal = state.scores.blue + liveScore.blue.total;
+  const margin = blueTotal - redTotal;
+  if (margin < -35) return CPU_PASS_CHANCE.behind;
+  if (margin > 55) return CPU_PASS_CHANCE.ahead;
+  return CPU_PASS_CHANCE.close;
 }
 
 function commitCpuPlacement(best) {
@@ -1165,7 +1180,7 @@ function findBestPlacement(team) {
   state.racks[team].forEach((tile) => {
     openCells.forEach((cellId) => {
       const value = evaluatePlacement(team, tile, cellId);
-      if (value > (best?.value ?? -1)) best = { tile, cellId, value };
+      if (value > (best?.value ?? -1) || (value === best?.value && Math.random() < 0.35)) best = { tile, cellId, value };
     });
   });
   return best?.value >= 0 ? best : null;
@@ -1174,18 +1189,81 @@ function findBestPlacement(team) {
 function evaluatePlacement(team, tile, cellId) {
   const result = canPlaceTile(tile, cellId);
   if (!result.ok) return -1;
+  const opponent = otherTeam(team);
+  const beforeScore = scoreRound();
+  const threatBefore = getBoardThreatScore(opponent);
+  const directBlockValue = getPlacementBlockValue(opponent, cellId);
   const placedTile = resolveWildForPlacement(tile, cellId, team);
   state.board[cellId] = placedTile;
-  const before = scoreRound()[team].total;
-  let value = before;
+  const afterScore = scoreRound();
+  const threatAfter = getBoardThreatScore(opponent);
+  let value = 0;
+  const ownDelta = afterScore[team].total - beforeScore[team].total;
+  const opponentThreatBlocked = Math.max(0, threatBefore - threatAfter);
+  value += ownDelta * 18;
+  value += afterScore[team].total * 1.4;
+  value += opponentThreatBlocked * 10;
   const cell = getCellDef(cellId);
   value += cell.center ? 3 : 1;
+  if (placedTile.type === "wild") value -= 3;
+  value += getPlacementShapeValue(team, cellId);
+  value += directBlockValue * 2;
   getLinesForCell(cellId).forEach((line) => {
     const tiles = getLineTiles(line);
-    if (tiles.every((item) => item.color === team) && lineCanSupportPattern(line)) value += tiles.length * 4;
+    if (tiles.every((item) => item.color === team) && lineCanSupportPattern(line)) value += tiles.length * 5;
   });
   state.board[cellId] = null;
   return value;
+}
+
+function getBoardThreatScore(team) {
+  let score = 0;
+  LINE_DEFS.forEach((line) => {
+    score += getLineThreatValue(line, team);
+  });
+  X_DEFS.forEach((x) => {
+    score += getXThreatValue(x, team);
+  });
+  return score;
+}
+
+function getLineThreatValue(line, team) {
+  const tiles = line.cells.map((id) => state.board[id]);
+  if (tiles.some((tile) => tile && tile.color !== team)) return 0;
+  const filled = tiles.filter(Boolean).length;
+  const open = tiles.length - filled;
+  if (!filled || !open) return 0;
+  if (!lineCanSupportPattern(line)) return 0;
+  if (open === 1) return line.points;
+  if (open === 2 && filled >= 2) return Math.round(line.points * 0.35);
+  return filled >= 2 ? 4 : 0;
+}
+
+function getXThreatValue(x, team) {
+  const tiles = x.cells.map((cell) => state.board[cell.id]);
+  if (tiles.some((tile) => tile && tile.color !== team)) return 0;
+  const filled = tiles.filter(Boolean).length;
+  const open = tiles.length - filled;
+  if (!filled || !open) return 0;
+  const points = x.type === "super" ? 200 : 100;
+  if (open === 1) return points;
+  if (open === 2 && filled >= x.cells.length - 2) return Math.round(points * 0.45);
+  return filled >= 3 ? 8 : 0;
+}
+
+function getPlacementShapeValue(team, cellId) {
+  const cell = getCellDef(cellId);
+  const x = getXDef(cell?.xId);
+  if (!x) return 0;
+  const ownInX = x.cells.filter((item) => state.board[item.id]?.color === team).length;
+  const opponentInX = x.cells.filter((item) => state.board[item.id] && state.board[item.id].color !== team).length;
+  if (opponentInX) return ownInX;
+  return ownInX * (x.type === "super" ? 3 : 4);
+}
+
+function getPlacementBlockValue(opponent, cellId) {
+  const lines = getLinesForCell(cellId);
+  return lines.reduce((total, line) => total + getLineThreatValue(line, opponent), 0);
 }
 
 function checkRoundEnd() {
