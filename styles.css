@@ -1352,7 +1352,7 @@ h2 {
 }
 
 .tile.selected {
-  outline: 3px solid rgba(0, 122, 255, 0.8);
+  outline: 3px solid rgba(210, 59, 69, 0.82);
   outline-offset: 2px;
   opacity: 1;
   visibility: visible;
