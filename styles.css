@@ -1794,6 +1794,13 @@ h2 {
   cursor: default;
 }
 
+.rack-slot.empty:hover {
+  color: rgba(29, 29, 31, 0.34);
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px dashed rgba(0, 0, 0, 0.16);
+  box-shadow: none;
+}
+
 .rack-slot.stacked::before,
 .rack-slot.stacked::after {
   content: "";
