@@ -786,9 +786,9 @@ h2 {
 }
 
 .cell.selectable {
-  border-color: rgba(0, 122, 255, 0.58);
+  border-color: rgba(210, 59, 69, 0.72);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.11);
+  box-shadow: 0 0 0 3px rgba(210, 59, 69, 0.14);
 }
 
 .cell.cpu-thinking {
