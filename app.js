@@ -6,6 +6,10 @@ const BOMB_CHANCE_STEP = 4;
 const MAX_BOMB_CHANCE = 28;
 const WILD_DRAW_CHANCE = 12;
 const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
+const DRAW_ASSIST_CHANCE = 34;
+const STUCK_DRAW_ASSIST_CHANCE = 88;
+const RESCUE_DRAW_LIMIT = 2;
+const RESCUE_BOMB_CHANCE = 38;
 const CPU_PASS_CHANCE = {
   behind: 0.01,
   close: 0.06,
@@ -115,6 +119,7 @@ const state = {
   phase: "cpu",
   selectedTileId: null,
   chain: 0,
+  rescueDraws: { red: 0, blue: 0 },
   turnSnapshot: null,
   racks: { red: [], blue: [] },
   board: {},
@@ -190,6 +195,21 @@ function makeWildTile(color) {
 
 function drawRackTile(color, allowWild = true) {
   return allowWild && Math.random() * 100 < WILD_DRAW_CHANCE ? makeWildTile(color) : makeTile(color);
+}
+
+function drawSmartRackTile(color) {
+  const assistChance = hasPlayableTile(color) ? DRAW_ASSIST_CHANCE : STUCK_DRAW_ASSIST_CHANCE;
+  if (Math.random() * 100 >= assistChance) return drawRackTile(color);
+  return drawPlayableRackTile(color) || drawRackTile(color);
+}
+
+function drawPlayableRackTile(color) {
+  const openCells = Object.keys(state.board).filter((cellId) => !state.board[cellId]);
+  const rankChoices = shuffle(RANKS.map((rank) => makeTile(color, rank)))
+    .filter((tile) => openCells.some((cellId) => canPlaceTile(tile, cellId).ok));
+  if (rankChoices.length) return rankChoices[0];
+  const wild = makeWildTile(color);
+  return openCells.some((cellId) => canPlaceTile(wild, cellId).ok) ? wild : null;
 }
 
 function describeTile(tile) {
@@ -270,6 +290,7 @@ function setupRound() {
   window.clearTimeout(state.cpuTimer);
   state.selectedTileId = null;
   state.chain = 0;
+  state.rescueDraws = { red: 0, blue: 0 };
   state.turnSnapshot = null;
   state.roundBanked = { red: 0, blue: 0 };
   state.bombChance = BASE_BOMB_CHANCE;
@@ -676,8 +697,9 @@ function startHumanTurn() {
   const fromRect = getTileBagRect();
   state.phase = "playing";
   state.chain = 0;
+  state.rescueDraws.red = 0;
   state.bombChance = BASE_BOMB_CHANCE;
-  const tile = drawRackTile("red");
+  const tile = drawSmartRackTile("red");
   state.racks.red.push(tile);
   state.turnSnapshot = createTurnSnapshot();
   state.lastEvent = `You drew ${describeTile(tile)}.`;
@@ -706,6 +728,7 @@ function passTurnTo(nextTeam, eventText) {
   state.selectedTileId = null;
   state.cpuThinkingCells = [];
   state.chain = 0;
+  state.rescueDraws[nextTeam] = 0;
   state.turnSnapshot = null;
   state.turn = nextTeam;
   state.phase = nextTeam === "red" ? "needDraw" : "cpu";
@@ -720,7 +743,7 @@ function resolveFreshDraw(color) {
   if (checkRoundEnd()) return;
   const event = pickFreshEvent();
   if (event === "number") {
-    const tile = drawRackTile(color);
+    const tile = drawSmartRackTile(color);
     const fromRect = color === "red" ? getTileBagRect() : null;
     state.racks[color].push(tile);
     const nextRisk = nextBombChance();
@@ -755,6 +778,7 @@ function hasPlayableTile(color) {
 function checkHumanPlayableTiles() {
   if (state.turn !== "red" || state.phase !== "playing") return false;
   if (hasPlayableTile("red")) return true;
+  if (tryRescueDraw("red")) return false;
   state.selectedTileId = null;
   setStatus("No playable tiles. Your turn ends.");
   render();
@@ -766,6 +790,56 @@ function checkHumanPlayableTiles() {
     onAction: () => passTurnTo("blue", "No playable red tiles. Blue CPU takes the turn.")
   });
   return false;
+}
+
+function tryRescueDraw(color) {
+  if (state.rescueDraws[color] >= RESCUE_DRAW_LIMIT || checkRoundEnd()) return false;
+  state.rescueDraws[color] += 1;
+  state.selectedTileId = null;
+  const bombColor = pickRescueBombColor(color);
+  if (bombColor) {
+    state.lastEvent = `${TEAM_LABEL[color]} had no legal move and pulled a rescue bomb.`;
+    setStatus(`${TEAM_LABEL[color]} is stuck. Rescue pull: ${TEAM_LABEL[bombColor]} Bomb.`);
+    triggerBomb(color, bombColor);
+    return true;
+  }
+  const tile = drawPlayableRackTile(color) || drawSmartRackTile(color);
+  const fromRect = color === "red" ? getTileBagRect() : null;
+  state.racks[color].push(tile);
+  state.lastEvent = `${TEAM_LABEL[color]} had no legal move and pulled ${describeTile(tile)}.`;
+  setStatus(`${TEAM_LABEL[color]} is stuck. Rescue pull: ${describeTile(tile)}.`);
+  state.phase = color === "red" ? "drawing" : "cpu";
+  render();
+  if (color === "red") {
+    animateDrawToRack(tile, fromRect);
+    window.setTimeout(() => {
+      if (state.turn === "red" && state.phase === "drawing") {
+        state.phase = "playing";
+        setStatus("Rescue tile added. Try this one.");
+        render();
+        checkHumanPlayableTiles();
+      }
+    }, 430);
+  } else {
+    state.cpuTimer = window.setTimeout(cpuStep, 420);
+  }
+  return true;
+}
+
+function pickRescueBombColor(color) {
+  const margin = getScoreMargin(color);
+  const bombChance = margin < -30 ? RESCUE_BOMB_CHANCE + 18 : margin > 45 ? RESCUE_BOMB_CHANCE - 12 : RESCUE_BOMB_CHANCE;
+  if (Math.random() * 100 >= bombChance) return null;
+  const opponent = otherTeam(color);
+  const opponentBombChance = margin < -30 ? 0.72 : margin > 45 ? 0.34 : 0.54;
+  return Math.random() < opponentBombChance ? opponent : color;
+}
+
+function getScoreMargin(color) {
+  const liveScore = scoreRound();
+  const redTotal = state.scores.red + liveScore.red.total;
+  const blueTotal = state.scores.blue + liveScore.blue.total;
+  return color === "red" ? redTotal - blueTotal : blueTotal - redTotal;
 }
 
 function pickFreshEvent() {
@@ -1113,7 +1187,8 @@ function otherTeam(color) {
 function runCpuTurn() {
   if (state.phase !== "cpu" || state.turn !== "blue") return;
   state.chain = 0;
-  const tile = drawRackTile("blue");
+  state.rescueDraws.blue = 0;
+  const tile = drawSmartRackTile("blue");
   state.racks.blue.push(tile);
   state.lastEvent = `Blue CPU drew ${describeTile(tile)}.`;
   render();
@@ -1123,6 +1198,7 @@ function runCpuTurn() {
 function cpuStep() {
   if (state.phase !== "cpu" || state.turn !== "blue") return;
   const best = findBestPlacement("blue");
+  if (!best && tryRescueDraw("blue")) return;
   if (!best || (state.chain > 0 && Math.random() < getCpuPassChance())) {
     passTurnTo("red", "Blue CPU ended its turn.");
     return;
