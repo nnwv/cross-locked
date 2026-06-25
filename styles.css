@@ -1366,25 +1366,25 @@ h2 {
   background: linear-gradient(180deg, #ffffff, #e8e8ed);
 }
 
-.tile:hover:not(:disabled) {
+.tile:not(.empty):hover:not(:disabled) {
   border-color: rgba(0, 0, 0, 0.2);
   box-shadow: 0 9px 20px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
-.tile.red:hover:not(:disabled) {
+.tile.red:not(.empty):hover:not(:disabled) {
   background: linear-gradient(180deg, #ef5a63, #b91f2a);
 }
 
-.tile.blue:hover:not(:disabled) {
+.tile.blue:not(.empty):hover:not(:disabled) {
   background: linear-gradient(180deg, #3f8fe4, #1556a0);
 }
 
-.tile.wild:hover:not(:disabled) {
+.tile.wild:not(.empty):hover:not(:disabled) {
   background:
     linear-gradient(135deg, rgba(239, 90, 99, 0.96) 0 38%, #ffffff 38% 62%, rgba(63, 143, 228, 0.96) 62% 100%);
 }
 
-.tile.joker:hover:not(:disabled) {
+.tile.joker:not(.empty):hover:not(:disabled) {
   background: linear-gradient(180deg, #ffffff, #e8e8ed);
 }
 
@@ -1845,6 +1845,7 @@ h2 {
   border: 1px dashed rgba(0, 0, 0, 0.16);
   box-shadow: none;
   cursor: default;
+  pointer-events: none;
 }
 
 .rack-slot.empty:hover {
