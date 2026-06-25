@@ -145,6 +145,7 @@ const els = {
   redTotalScore: document.querySelector("#redTotalScore"),
   blueTotalScore: document.querySelector("#blueTotalScore"),
   highScore: document.querySelector("#highScore"),
+  winStreak: document.querySelector("#winStreak"),
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
   riskPips: document.querySelector("#riskPips"),
@@ -230,10 +231,12 @@ function loadRecords() {
     const records = JSON.parse(localStorage.getItem("crossLockedLiteRecords")) || {};
     return {
       highGame: Number(records.highGame) || 0,
-      largestMargin: Number(records.largestMargin) || 0
+      largestMargin: Number(records.largestMargin) || 0,
+      currentWinStreak: Number(records.currentWinStreak) || 0,
+      bestWinStreak: Number(records.bestWinStreak) || 0
     };
   } catch {
-    return { highGame: 0, largestMargin: 0 };
+    return { highGame: 0, largestMargin: 0, currentWinStreak: 0, bestWinStreak: 0 };
   }
 }
 
@@ -747,8 +750,8 @@ function resolveFreshDraw(color) {
     const fromRect = color === "red" ? getTileBagRect() : null;
     state.racks[color].push(tile);
     const nextRisk = nextBombChance();
-    state.lastEvent = `${TEAM_LABEL[color]} drew ${describeTile(tile)}. Bomb risk rises to ${nextRisk}%.`;
-    setStatus(color === "red" ? `Fresh tile added. Bomb risk is now ${nextRisk}%.` : state.lastEvent);
+    state.lastEvent = `${TEAM_LABEL[color]} drew ${describeTile(tile)}.`;
+    setStatus(color === "red" ? "Fresh tile added." : state.lastEvent);
     state.bombChance = nextRisk;
     state.phase = color === "red" ? "drawing" : "cpu";
     state.turnSnapshot = createTurnSnapshot();
@@ -758,7 +761,7 @@ function resolveFreshDraw(color) {
       window.setTimeout(() => {
         if (state.turn === "red" && state.phase === "drawing") {
           state.phase = "playing";
-          setStatus(`Fresh tile added. Bomb risk is now ${state.bombChance}%. Place another tile, or end your turn.`);
+          setStatus("Fresh tile added. Place another tile, or end your turn.");
           render();
           checkHumanPlayableTiles();
         }
@@ -1380,6 +1383,7 @@ function finishGame(roundScore, endedRound) {
   const margin = Math.abs(state.scores.red - state.scores.blue);
   state.records.highGame = Math.max(state.records.highGame, state.scores.red);
   state.records.largestMargin = Math.max(state.records.largestMargin, margin);
+  updateWinStreakRecord();
   saveRecords();
   state.phase = "gameOver";
   state.selectedTileId = null;
@@ -1392,6 +1396,15 @@ function finishGame(roundScore, endedRound) {
     scoreCard: buildScoreCard(`Final margin: ${Math.abs(state.scores.red - state.scores.blue)}.`),
     actionText: "Done"
   });
+}
+
+function updateWinStreakRecord() {
+  if (state.scores.red > state.scores.blue) {
+    state.records.currentWinStreak = (Number(state.records.currentWinStreak) || 0) + 1;
+    state.records.bestWinStreak = Math.max(Number(state.records.bestWinStreak) || 0, state.records.currentWinStreak);
+    return;
+  }
+  state.records.currentWinStreak = 0;
 }
 
 function scoreRound() {
@@ -1537,6 +1550,7 @@ function renderHud() {
   document.querySelector(".score-team-card.red")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
   document.querySelector(".score-team-card.blue")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
   els.highScore.textContent = state.records.highGame;
+  els.winStreak.textContent = state.records.bestWinStreak;
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");

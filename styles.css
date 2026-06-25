@@ -376,19 +376,30 @@ h2 {
   color: var(--blue);
 }
 
-.rack-high-pill {
+.records-cluster {
   grid-area: high;
-  justify-self: center;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(54px, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+
+.rack-high-pill,
+.streak-pill {
+  justify-self: stretch;
   width: 100%;
   padding: 7px 5px;
   text-align: center;
 }
 
-.rack-high-pill strong {
+.rack-high-pill strong,
+.streak-pill strong {
   font-size: 1rem;
 }
 
-.rack-high-pill span {
+.rack-high-pill span,
+.streak-pill span {
   font-size: 0.56rem;
 }
 
@@ -1504,7 +1515,7 @@ h2 {
 .rack-card {
   display: grid;
   grid-template-areas: "high bag rack turn";
-  grid-template-columns: minmax(58px, 68px) minmax(60px, 76px) minmax(320px, 440px) minmax(260px, 360px);
+  grid-template-columns: minmax(118px, 148px) minmax(60px, 76px) minmax(320px, 440px) minmax(260px, 360px);
   align-items: center;
   justify-content: center;
   gap: clamp(6px, 1vw, 12px);
@@ -2053,7 +2064,7 @@ li {
     grid-template-areas:
       "high bag turn"
       "rack rack rack";
-    grid-template-columns: minmax(58px, 72px) minmax(58px, 72px) minmax(0, 1fr);
+    grid-template-columns: minmax(112px, 140px) minmax(58px, 72px) minmax(0, 1fr);
     align-items: stretch;
     gap: 6px 8px;
     min-height: 0;
@@ -2065,11 +2076,13 @@ li {
     width: auto;
   }
 
-  .rack-high-pill span {
+  .rack-high-pill span,
+  .streak-pill span {
     font-size: 0.5rem;
   }
 
-  .rack-high-pill strong {
+  .rack-high-pill strong,
+  .streak-pill strong {
     font-size: 0.92rem;
   }
 
@@ -2236,7 +2249,7 @@ li {
     grid-template-areas:
       "high bag turn"
       "rack rack rack";
-    grid-template-columns: minmax(52px, 68px) minmax(52px, 68px) minmax(0, 1fr);
+    grid-template-columns: minmax(104px, 132px) minmax(52px, 68px) minmax(0, 1fr);
     gap: 6px;
     min-height: 0;
   }

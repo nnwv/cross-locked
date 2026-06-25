@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f5f5f7">
     <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=20260625-empty-rack-no-hover">
+    <link rel="stylesheet" href="styles.css?v=20260625-win-streak">
   </head>
   <body>
     <div class="app-shell">
@@ -48,9 +48,15 @@
 
         <aside class="side-panel" aria-label="Turn controls">
           <section class="rack-card">
-            <div class="high-pill rack-high-pill">
-              <span>High Score</span>
-              <strong id="highScore">0</strong>
+            <div class="records-cluster" aria-label="Player records">
+              <div class="high-pill rack-high-pill">
+                <span>High Score</span>
+                <strong id="highScore">0</strong>
+              </div>
+              <div class="high-pill streak-pill">
+                <span>Win Streak</span>
+                <strong id="winStreak">0</strong>
+              </div>
             </div>
             <div id="tileBag" class="tile-bag" aria-label="Tile bag">
               <span class="bag-mouth"></span>
@@ -100,6 +106,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260625-empty-rack-no-hover"></script>
+    <script src="app.js?v=20260625-win-streak"></script>
   </body>
 </html>
