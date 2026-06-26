@@ -1531,7 +1531,7 @@ h2 {
 .copyright-note {
   position: absolute;
   left: 50%;
-  top: calc(50% + (var(--socket-size) * 3.1));
+  top: calc(50% + (var(--socket-size) * 4));
   z-index: 2;
   width: calc(var(--socket-size) * 6);
   margin: 0;
@@ -1540,7 +1540,7 @@ h2 {
   font-weight: 680;
   line-height: 1.25;
   text-align: center;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
@@ -2297,7 +2297,7 @@ li {
   }
 
   .copyright-note {
-    top: calc(50% + (var(--socket-size) * 3.05));
+    top: calc(50% + (var(--socket-size) * 4));
     width: calc(var(--socket-size) * 7);
     font-size: 0.46rem;
   }
