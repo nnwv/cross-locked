@@ -2030,7 +2030,7 @@ li {
   line-height: 1.35;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .topbar,
   .game-layout {
     grid-template-columns: 1fr;
@@ -2268,6 +2268,8 @@ li {
     width: auto;
     border-left: 0;
     border-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
   }
 
   .rack-turn-card .turn-actions {
@@ -2278,6 +2280,12 @@ li {
     min-height: 36px;
     padding-inline: 6px;
     font-size: 0.78rem;
+  }
+
+  .rack-turn-card .status-text,
+  .rack-turn-card .risk-meter,
+  .rack-turn-card .turn-copy {
+    display: none;
   }
 
   .board-brand {
@@ -2314,4 +2322,99 @@ li {
     grid-template-columns: repeat(3, 1fr);
   }
 
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (min-width: 700px) {
+  .app-shell {
+    padding: 4px;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(292px, 38vw);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .board-area {
+    --socket-size: min(calc(100cqw / 13), calc(100cqh / 13), 54px);
+  }
+
+  .board-brand {
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .side-panel {
+    min-width: 0;
+    border-top: 0;
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .rack-card {
+    height: 100%;
+    grid-template-areas:
+      "high bag"
+      "turn turn"
+      "rack rack";
+    grid-template-columns: minmax(0, 1fr) minmax(52px, 66px);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: start;
+    align-items: start;
+    justify-content: stretch;
+    gap: 6px;
+    padding: 6px;
+    overflow: hidden;
+  }
+
+  .records-cluster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tile-bag {
+    width: 54px;
+    height: 60px;
+    padding: 15px 6px 7px;
+  }
+
+  .rack-turn-card {
+    border-left: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    padding-top: 6px;
+  }
+
+  .rack-turn-card .status-text,
+  .rack-turn-card .risk-meter {
+    display: none;
+  }
+
+  .rack-turn-card .turn-actions {
+    grid-template-columns: minmax(72px, 1fr) minmax(72px, 1fr) 38px;
+  }
+
+  .rack-turn-card .turn-actions button {
+    min-height: 38px;
+    padding-inline: 8px;
+    font-size: 0.8rem;
+  }
+
+  .rack {
+    align-self: stretch;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .rack-group {
+    min-width: 0;
+  }
+
+  .rack-tiles,
+  .rack-group:last-child .rack-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .tile {
+    min-width: 0;
+  }
 }
