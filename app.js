@@ -258,6 +258,23 @@ function showMessage({ eyebrow, title, body, scoreCard = null, actionText = "Con
   if (!els.messageDialog.open) els.messageDialog.showModal();
 }
 
+function shouldShowMobileNotice() {
+  return window.matchMedia("(max-width: 680px), (pointer: coarse) and (max-width: 760px)").matches;
+}
+
+function showMobileNotice() {
+  if (!shouldShowMobileNotice()) return;
+  window.setTimeout(() => {
+    if (els.messageDialog.open) return;
+    showMessage({
+      eyebrow: "Heads up",
+      title: "Best on desktop or tablet",
+      body: "Cross Locked Lite is currently designed for desktop and tablet. You can still play on mobile, but the board is easier to use on a larger screen.",
+      actionText: "Play anyway"
+    });
+  }, 350);
+}
+
 function renderScoreCard(card) {
   const wrap = document.createElement("div");
   wrap.className = "score-card";
@@ -1656,3 +1673,4 @@ els.messageDialog.addEventListener("close", () => {
 });
 
 setupRound();
+showMobileNotice();
