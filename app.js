@@ -1,6 +1,10 @@
 const RANKS = ["1", "2", "3", "4", "5", "6", "7"];
 const CENTER_RANKS = ["3", "4", "5"];
 const TOTAL_ROUNDS = 2;
+const SHORT_LINE_POINTS = 250;
+const LONG_LINE_POINTS = 500;
+const SMALL_X_POINTS = 1000;
+const BIG_X_POINTS = 2000;
 const BASE_BOMB_CHANCE = 8;
 const BOMB_CHANCE_STEP = 4;
 const MAX_BOMB_CHANCE = 28;
@@ -86,16 +90,20 @@ const X_DEFS = [
 const LINE_DEFS = X_DEFS.flatMap((x) => {
   if (x.type === "super") {
     return [
-      { id: `${x.id}-down-diagonal`, xId: x.id, name: "Long", points: 50, cells: ["su-0", "su-1", "su-4", "su-7", "su-8"] },
-      { id: `${x.id}-up-diagonal`, xId: x.id, name: "Long", points: 50, cells: ["su-2", "su-3", "su-4", "su-5", "su-6"] }
+      { id: `${x.id}-down-diagonal`, xId: x.id, name: "Long", points: LONG_LINE_POINTS, cells: ["su-0", "su-1", "su-4", "su-7", "su-8"] },
+      { id: `${x.id}-up-diagonal`, xId: x.id, name: "Long", points: LONG_LINE_POINTS, cells: ["su-2", "su-3", "su-4", "su-5", "su-6"] }
     ];
   }
   const p = x.cells.map((cell) => cell.id);
   return [
-    { id: `${x.id}-down-diagonal`, xId: x.id, name: "Short", points: 25, cells: [p[0], p[2], p[4]] },
-    { id: `${x.id}-up-diagonal`, xId: x.id, name: "Short", points: 25, cells: [p[1], p[2], p[3]] }
+    { id: `${x.id}-down-diagonal`, xId: x.id, name: "Short", points: SHORT_LINE_POINTS, cells: [p[0], p[2], p[4]] },
+    { id: `${x.id}-up-diagonal`, xId: x.id, name: "Short", points: SHORT_LINE_POINTS, cells: [p[1], p[2], p[3]] }
   ];
 });
+
+function getXPoints(x) {
+  return x.type === "super" ? BIG_X_POINTS : SMALL_X_POINTS;
+}
 
 const BOARD_ORIGINS = {
   "north-west": { col: 0, row: 1 },
@@ -681,13 +689,13 @@ function getCompletedXCelebration(color, cellId) {
   return {
     xId: x.id,
     color,
-    points: x.type === "super" ? 200 : 100,
+    points: getXPoints(x),
     label: x.type === "super" ? "Big X" : "Small X"
   };
 }
 
 function scoreAndResetX(color, x, next) {
-  const points = x.type === "super" ? 200 : 100;
+  const points = getXPoints(x);
   state.phase = "scoring";
   state.scoringX = { xId: x.id, color, points };
   state.scores[color] += points;
@@ -1341,7 +1349,7 @@ function getXThreatValue(x, team) {
   const filled = tiles.filter(Boolean).length;
   const open = tiles.length - filled;
   if (!filled || !open) return 0;
-  const points = x.type === "super" ? 200 : 100;
+  const points = getXPoints(x);
   if (open === 1) return points;
   if (open === 2 && filled >= x.cells.length - 2) return Math.round(points * 0.45);
   return filled >= 3 ? 8 : 0;
@@ -1433,7 +1441,7 @@ function scoreTeam(team) {
   const completedXs = new Set();
   X_DEFS.forEach((x) => {
     if (xQualifiesForTeam(x, team)) {
-      total += x.type === "super" ? 200 : 100;
+      total += getXPoints(x);
       completedXs.add(x.id);
     }
   });
