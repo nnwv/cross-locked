@@ -6,15 +6,20 @@
     <meta name="theme-color" content="#f5f5f7">
     <title>Cross Locked Lite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=20260714-bigger-scoring">
+    <link rel="stylesheet" href="styles.css?v=20260727-logo-link">
   </head>
   <body>
     <div class="app-shell">
       <main class="game-layout">
         <section class="board-area" aria-label="Game board">
-          <div class="board-brand" aria-label="Cross Locked Lite">
-            <strong>Cross Locked</strong>
-            <span>Lite</span>
+          <div class="board-brand-stack">
+            <div class="board-brand" aria-label="Cross Locked Lite">
+              <div class="board-brand-title">
+                <strong>Cross Locked</strong>
+                <span>Lite</span>
+              </div>
+              <a class="board-brand-link" href="https://crosslocked.com" target="_blank" rel="noopener">Full version available at crosslocked.com</a>
+            </div>
           </div>
           <p class="copyright-note">Copyright 2026 Cross Locked Softworks, LLC</p>
           <div class="board-hud" aria-label="Game score">
@@ -75,7 +80,7 @@
               <div class="turn-actions">
                 <button id="drawPlayBtn" class="primary">Draw</button>
                 <button id="endTurnBtn" disabled>End Turn</button>
-                <button id="rulesBtn" class="icon-button" aria-label="Show rules">?</button>
+                <button id="rulesBtn" class="rules-button" aria-label="Show rules">Rules</button>
               </div>
             </section>
           </section>
@@ -92,8 +97,8 @@
         <li>Score points by completing as many lines and Xs as possible with tiles of just your color, Red.</li>
         <li>Prevent the opponent, Blue, from doing the same.</li>
         <li>On your turn, place as many tiles as you can in sequences like 4-5-6 or like kind like 4-4-4.</li>
-        <li>For each tile played, you receive a fresh tile. Your turn ends when you get hit with a bomb or choose End Turn.</li>
-        <li>Bombs remove 1 or 2 tiles from the board.</li>
+        <li>For each tile played, you receive a fresh tile. Your turn ends when you get hit with a random bomb or choose End Turn.</li>
+        <li>Random bombs remove 1 or 2 tiles from the board.</li>
         <li>Score 250 points for each short line, 500 for a long line, 1000 for a small X, and 2000 for a large X. No line points are awarded on a completed X.</li>
         <li>Each game has 2 rounds. Each round ends when the board is filled. High score wins.</li>
       </ul>
@@ -106,6 +111,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260714-bigger-scoring"></script>
+    <script src="app.js?v=20260727-logo-link"></script>
   </body>
 </html>

@@ -1555,7 +1555,8 @@ function renderTile(tile, asButton) {
   const el = document.createElement(asButton ? "button" : "div");
   el.className = `tile ${tile.color} ${tile.type === "wild" ? "wild" : ""}`;
   el.dataset.tile = tile.id;
-  el.innerHTML = `${tile.rank}<small>${tile.type === "wild" ? "wild" : tile.color}</small>`;
+  const face = tile.type === "wild" ? "WILD" : tile.rank;
+  el.innerHTML = `${face}<small>${tile.type === "wild" ? "wild" : tile.color}</small>`;
   return el;
 }
 
