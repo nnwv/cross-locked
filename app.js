@@ -122,7 +122,6 @@ const state = {
   },
   roundBanked: { red: 0, blue: 0 },
   displayedScores: { red: 0, blue: 0 },
-  records: loadRecords(),
   turn: "blue",
   phase: "cpu",
   selectedTileId: null,
@@ -153,8 +152,6 @@ const els = {
   blueRound2Row: document.querySelector("#blueRound2Row"),
   redTotalScore: document.querySelector("#redTotalScore"),
   blueTotalScore: document.querySelector("#blueTotalScore"),
-  highScore: document.querySelector("#highScore"),
-  winStreak: document.querySelector("#winStreak"),
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
   riskPips: document.querySelector("#riskPips"),
@@ -238,24 +235,6 @@ function shuffle(list) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
-}
-
-function loadRecords() {
-  try {
-    const records = JSON.parse(localStorage.getItem("crossLockedLiteRecords")) || {};
-    return {
-      highGame: Number(records.highGame) || 0,
-      largestMargin: Number(records.largestMargin) || 0,
-      currentWinStreak: Number(records.currentWinStreak) || 0,
-      bestWinStreak: Number(records.bestWinStreak) || 0
-    };
-  } catch {
-    return { highGame: 0, largestMargin: 0, currentWinStreak: 0, bestWinStreak: 0 };
-  }
-}
-
-function saveRecords() {
-  localStorage.setItem("crossLockedLiteRecords", JSON.stringify(state.records));
 }
 
 function winnerText(redScore, blueScore, label) {
@@ -1424,7 +1403,7 @@ function checkRoundEnd() {
   state.scores.red += boardScore.red.total;
   state.scores.blue += boardScore.blue.total;
   if (state.round >= TOTAL_ROUNDS) {
-    finishGame(roundScore, endedRound);
+    finishGame(endedRound);
     return true;
   }
   state.phase = "roundOver";
@@ -1445,12 +1424,7 @@ function checkRoundEnd() {
   return true;
 }
 
-function finishGame(roundScore, endedRound) {
-  const margin = Math.abs(state.scores.red - state.scores.blue);
-  state.records.highGame = Math.max(state.records.highGame, state.scores.red);
-  state.records.largestMargin = Math.max(state.records.largestMargin, margin);
-  updateWinStreakRecord();
-  saveRecords();
+function finishGame(endedRound) {
   state.phase = "gameOver";
   state.selectedTileId = null;
   state.lastEvent = winnerText(state.scores.red, state.scores.blue, "Game");
@@ -1462,15 +1436,6 @@ function finishGame(roundScore, endedRound) {
     scoreCard: buildScoreCard(`Final margin: ${Math.abs(state.scores.red - state.scores.blue)}.`),
     actionText: "Done"
   });
-}
-
-function updateWinStreakRecord() {
-  if (state.scores.red > state.scores.blue) {
-    state.records.currentWinStreak = (Number(state.records.currentWinStreak) || 0) + 1;
-    state.records.bestWinStreak = Math.max(Number(state.records.bestWinStreak) || 0, state.records.currentWinStreak);
-    return;
-  }
-  state.records.currentWinStreak = 0;
 }
 
 function scoreRound() {
@@ -1638,8 +1603,6 @@ function renderHud() {
   els.blueRound2Row.hidden = !showRoundTwo;
   document.querySelector(".score-team-card.red")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
   document.querySelector(".score-team-card.blue")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
-  if (els.highScore) els.highScore.textContent = state.records.highGame;
-  if (els.winStreak) els.winStreak.textContent = state.records.bestWinStreak;
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "NEW GAME" : "DRAW";
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
