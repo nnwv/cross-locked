@@ -182,6 +182,11 @@ function refreshBoardHudRefs() {
 }
 
 let pendingMessageAction = null;
+let statusTypingTimer = null;
+let hasTypedFirstPlayerInstruction = false;
+let playerIdleTimer = null;
+let playerIdleKey = "";
+const PLAYER_IDLE_REMINDER_MS = 15000;
 
 function uid(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -1641,13 +1646,18 @@ function renderHud() {
   els.endTurnBtn.disabled = state.turn !== "red" || state.phase !== "playing";
   els.rulesBtn.disabled = false;
   document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && state.phase === "needDraw");
-  if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red tile.");
+  if (state.phase === "needDraw") {
+    const typeFirstInstruction = !hasTypedFirstPlayerInstruction;
+    setStatus("Tap Draw to start. You will get one red tile.", { type: typeFirstInstruction });
+    if (typeFirstInstruction) hasTypedFirstPlayerInstruction = true;
+  }
   if (state.phase === "drawing") setStatus("Drawing...");
   if (state.phase === "placing") setStatus("Tile placed. Drawing automatically.");
   if (state.phase === "cpu") setStatus(state.cpuThinkingCells.length ? "Blue CPU is choosing a spot." : "Blue CPU is taking its turn.");
   if (state.phase === "bombing") setStatus(state.bomb?.message || "Bomb is resolving.");
   if (state.phase === "scoring" && state.scoringX) setStatus(`${TEAM_LABEL[state.scoringX.color]} scores ${state.scoringX.points}. Resetting that X.`);
   if (state.celebratingX) setStatus(`${TEAM_LABEL[state.celebratingX.color]} completed a ${state.celebratingX.label} for ${state.celebratingX.points}.`);
+  schedulePlayerIdleReminder();
 }
 
 function getDisplayedRoundScores() {
@@ -1711,12 +1721,82 @@ function getTurnTitle() {
   return "Place or end";
 }
 
-function setStatus(message) {
-  els.statusText.textContent = message;
+function setStatus(message, options = {}) {
+  if (!els.statusText || (!options.force && els.statusText.dataset.message === message)) return;
+  const measure = els.statusText.querySelector(".status-measure");
+  const output = els.statusText.querySelector(".status-output");
+  if (!measure || !output) return;
+  els.statusText.dataset.message = message;
+  els.statusText.setAttribute("aria-label", message);
+  measure.textContent = message;
+  window.clearTimeout(statusTypingTimer);
+  statusTypingTimer = null;
+  output.classList.remove("typing");
+
+  if (!options.type || window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) {
+    output.textContent = message;
+    return;
+  }
+
+  let index = 0;
+  output.textContent = "";
+  output.classList.add("typing");
+
+  const typeNextCharacter = () => {
+    if (els.statusText.dataset.message !== message) return;
+    output.textContent += message[index];
+    index += 1;
+    if (index >= message.length) {
+      output.classList.remove("typing");
+      statusTypingTimer = null;
+      return;
+    }
+    const pause = /[.!?]/.test(message[index - 1]) ? 70 : 14;
+    statusTypingTimer = window.setTimeout(typeNextCharacter, pause);
+  };
+
+  typeNextCharacter();
+}
+
+function getPlayerIdleReminder() {
+  if (state.turn !== "red") return "";
+  if (state.phase === "needDraw") return "Tap DRAW to begin your turn.";
+  if (state.phase !== "playing") return "";
+  if (state.selectedTileId) return "Tap one of the red outlined spaces to place your tile.";
+  return "Tap a bouncing tile in your rack, or tap END TURN.";
+}
+
+function getPlayerIdleKey() {
+  return `${state.turn}:${state.phase}:${state.selectedTileId || "none"}`;
+}
+
+function schedulePlayerIdleReminder({ restart = false } = {}) {
+  const message = getPlayerIdleReminder();
+  if (!message || document.hidden || els.rulesDialog.open || els.messageDialog.open) {
+    window.clearTimeout(playerIdleTimer);
+    playerIdleTimer = null;
+    playerIdleKey = "";
+    return;
+  }
+
+  const key = getPlayerIdleKey();
+  if (!restart && playerIdleKey === key) return;
+  window.clearTimeout(playerIdleTimer);
+  playerIdleKey = key;
+  playerIdleTimer = window.setTimeout(() => {
+    playerIdleTimer = null;
+    if (getPlayerIdleKey() !== key || document.hidden || els.rulesDialog.open || els.messageDialog.open) return;
+    setStatus(getPlayerIdleReminder(), { type: true, force: true });
+  }, PLAYER_IDLE_REMINDER_MS);
+}
+
+function notePlayerActivity() {
+  schedulePlayerIdleReminder({ restart: true });
 }
 
 els.drawPlayBtn.addEventListener("click", () => {
   if (state.phase === "gameOver") {
+    hasTypedFirstPlayerInstruction = false;
     state.round = 1;
     state.scores = { red: 0, blue: 0 };
     state.roundScores = {
@@ -1735,11 +1815,15 @@ els.rulesBtn.addEventListener("click", () => {
   if (!els.rulesDialog.open) els.rulesDialog.showModal();
 });
 els.closeRulesBtn.addEventListener("click", () => els.rulesDialog.close());
+els.rulesDialog.addEventListener("close", () => schedulePlayerIdleReminder({ restart: true }));
 els.messageActionBtn.addEventListener("click", () => els.messageDialog.close());
 els.messageDialog.addEventListener("close", () => {
   const action = pendingMessageAction;
   pendingMessageAction = null;
   if (action) action();
 });
+document.addEventListener("pointerdown", notePlayerActivity, { passive: true });
+document.addEventListener("keydown", notePlayerActivity);
+document.addEventListener("visibilitychange", () => schedulePlayerIdleReminder({ restart: true }));
 
 setupRound();

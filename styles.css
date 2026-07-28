@@ -1565,10 +1565,38 @@ h2 {
 }
 
 .status-text {
+  position: relative;
   min-height: 32px;
   margin: 8px 0 9px;
   color: var(--muted);
   line-height: 1.38;
+}
+.status-measure {
+  display: block;
+  visibility: hidden;
+}
+
+.status-output {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.status-output.typing::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 0.9em;
+  margin-left: 3px;
+  background: currentColor;
+  vertical-align: -0.08em;
+  animation: terminalCursorBlink 560ms steps(1, end) infinite;
+}
+
+@keyframes terminalCursorBlink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .turn-actions {
@@ -1662,6 +1690,7 @@ h2 {
 }
 
 .rack-turn-card .status-text {
+  position: relative;
   min-height: 0;
   margin: 3px 0 0;
   font-size: var(--text-body);
@@ -2268,6 +2297,7 @@ li {
   }
 
   .rack-turn-card .status-text {
+    position: relative;
     max-width: 30ch;
     font-size: var(--text-body);
   }
@@ -2459,6 +2489,7 @@ li {
   }
 
   .rack-turn-card .status-text {
+    position: relative;
     display: block;
     max-width: none;
     margin-top: 3px;

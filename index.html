@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20260728-x-mark">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png?v=20260728-x-mark">
     <link rel="manifest" href="manifest.json?v=20260728-x-mark">
-    <link rel="stylesheet" href="styles.css?v=20260728-centered-brand">
+    <link rel="stylesheet" href="styles.css?v=20260728-first-terminal-status">
   </head>
   <body>
     <div class="app-shell">
@@ -66,7 +66,10 @@
             <section class="turn-card rack-turn-card">
               <div class="turn-copy">
                 <h2 id="turnTitle">Your turn</h2>
-                <p id="statusText" class="status-text">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</p>
+                <p id="statusText" class="status-text terminal-readout" aria-live="polite" aria-atomic="true">
+                  <span class="status-measure" aria-hidden="true">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</span>
+                  <span class="status-output" aria-hidden="true">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</span>
+                </p>
               </div>
               <div class="risk-meter" aria-label="Bomb risk">
                 <span>Bomb Risk</span>
@@ -106,6 +109,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260728-landing-fix"></script>
+    <script src="app.js?v=20260728-idle-guidance"></script>
   </body>
 </html>
