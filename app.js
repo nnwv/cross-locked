@@ -540,10 +540,9 @@ function placeSelectedTile(cellId) {
   state.phase = "placing";
   state.turnSnapshot = createTurnSnapshot();
   render();
-  animateTileToBoard(tile, fromRect);
-  window.setTimeout(() => {
+  animateTileToBoard(tile, fromRect, () => {
     resolvePlacedWild("red", cellId, () => resolvePostPlacement("red", cellId));
-  }, 340);
+  });
 }
 
 function getRackTileRect(tile) {
@@ -588,67 +587,93 @@ function resolvePlacedWild(color, cellId, next) {
   }, 180);
 }
 
-function animateTileToBoard(tile, fromRect) {
-  if (!fromRect) return;
-  const target = document.querySelector(`.cell [data-tile="${tile.id}"]`);
-  if (!target) return;
-  const toRect = target.getBoundingClientRect();
-  const flyer = renderTile(tile, false);
-  flyer.classList.add("tile-flyer", "rack-place-flyer");
-  const startSize = Math.min(fromRect.width, fromRect.height, toRect.width);
-  const startX = fromRect.left + fromRect.width / 2 - startSize / 2;
-  const startY = fromRect.top + fromRect.height / 2 - startSize / 2;
-  flyer.style.left = `${startX}px`;
-  flyer.style.top = `${startY}px`;
-  flyer.style.width = `${startSize}px`;
-  flyer.style.height = `${startSize}px`;
-  document.body.append(flyer);
-  target.style.visibility = "hidden";
-  const animation = flyer.animate(
-    [
-      { transform: "translate(0, 0) scale(1)", opacity: 1 },
-      { transform: "translate(0, -18px) scale(1.08)", opacity: 1, offset: 0.22 },
-      { transform: `translate(${toRect.left + toRect.width / 2 - (startX + startSize / 2)}px, ${toRect.top + toRect.height / 2 - (startY + startSize / 2)}px) scale(${toRect.width / startSize})`, opacity: 1 }
-    ],
-    { duration: 430, easing: "cubic-bezier(.18,.82,.2,1)" }
-  );
-  animation.onfinish = () => {
-    flyer.remove();
-    target.style.visibility = "";
-  };
+function animateTileToBoard(tile, fromRect, onLand) {
+  animateBoardTileFromRect(tile.id, fromRect, {
+    className: "rack-place-flyer",
+    duration: 430,
+    arcX: 0,
+    arcY: -18,
+    onLand
+  });
 }
 
-function animateCpuTileToBoard(tileId) {
+function animateCpuTileToBoard(tileId, onLand) {
   const fromRect = getBlueScoreAnchorRect();
+  animateBoardTileFromRect(tileId, fromRect, {
+    className: "cpu-flyer",
+    duration: 420,
+    arcX: -18,
+    arcY: 12,
+    sourceSize: Math.min(46, fromRect?.height || 46),
+    startOpacity: 0,
+    landedClass: "cpu-landed",
+    onLand
+  });
+}
+
+function animateBoardTileFromRect(tileId, fromRect, options) {
   const target = document.querySelector(`.cell [data-tile="${tileId}"]`);
-  if (!fromRect || !target) return;
+  const finishWithoutAnimation = () => options.onLand?.();
+  if (!fromRect || !target) {
+    finishWithoutAnimation();
+    return;
+  }
   const toRect = target.getBoundingClientRect();
+  const targetStyle = window.getComputedStyle(target);
   const flyer = target.cloneNode(true);
-  flyer.classList.add("tile-flyer", "cpu-flyer");
-  const startSize = Math.min(46, fromRect.height || 46);
-  flyer.style.left = `${fromRect.left + fromRect.width / 2 - startSize / 2}px`;
-  flyer.style.top = `${fromRect.top + fromRect.height / 2 - startSize / 2}px`;
-  flyer.style.width = `${startSize}px`;
-  flyer.style.height = `${startSize}px`;
+  flyer.classList.add("tile-flyer", options.className);
+  flyer.style.left = `${toRect.left}px`;
+  flyer.style.top = `${toRect.top}px`;
+  flyer.style.width = `${toRect.width}px`;
+  flyer.style.height = `${toRect.height}px`;
+  flyer.style.fontSize = targetStyle.fontSize;
+  flyer.style.padding = targetStyle.padding;
   document.body.append(flyer);
   target.style.visibility = "hidden";
+
+  const fromCenterX = fromRect.left + fromRect.width / 2;
+  const fromCenterY = fromRect.top + fromRect.height / 2;
+  const toCenterX = toRect.left + toRect.width / 2;
+  const toCenterY = toRect.top + toRect.height / 2;
+  const deltaX = fromCenterX - toCenterX;
+  const deltaY = fromCenterY - toCenterY;
+  const sourceSize = options.sourceSize || Math.min(fromRect.width, fromRect.height);
+  const startScale = sourceSize / Math.max(1, toRect.width);
+  const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : options.duration;
   const animation = flyer.animate(
     [
-      { transform: "translate(0, 0) scale(0.8)", opacity: 0 },
-      { transform: "translate(-18px, 12px) scale(1.08)", opacity: 1, offset: 0.22 },
+      { transform: `translate(${deltaX}px, ${deltaY}px) scale(${startScale})`, opacity: options.startOpacity ?? 1 },
       {
-        transform: `translate(${toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2)}px, ${toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2)}px) scale(${toRect.width / startSize})`,
-        opacity: 1
-      }
+        transform: `translate(${deltaX * 0.72 + options.arcX}px, ${deltaY * 0.72 + options.arcY}px) scale(${startScale * 1.06})`,
+        opacity: 1,
+        offset: 0.22
+      },
+      { transform: "translate(0, 0) scale(1)", opacity: 1 }
     ],
-    { duration: 420, easing: "cubic-bezier(.18,.82,.2,1)" }
+    { duration, easing: "cubic-bezier(.18,.82,.2,1)" }
   );
-  animation.onfinish = () => {
+
+  let finished = false;
+  let finishTimer = null;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    if (finishTimer) window.clearTimeout(finishTimer);
     flyer.remove();
-    target.style.visibility = "";
-    target.closest(".cell")?.classList.add("cpu-landed");
-    window.setTimeout(() => target.closest(".cell")?.classList.remove("cpu-landed"), 360);
+    if (target.isConnected) {
+      target.style.visibility = "";
+      const cell = target.closest(".cell");
+      if (cell && options.landedClass) {
+        cell.classList.add(options.landedClass);
+        window.setTimeout(() => cell.classList.remove(options.landedClass), 360);
+      }
+    }
+    options.onLand?.();
   };
+  animation.onfinish = finish;
+  animation.oncancel = finish;
+  animation.finished.then(finish, finish);
+  finishTimer = window.setTimeout(finish, duration + 80);
 }
 
 function resolvePostPlacement(color, cellId) {
@@ -1174,7 +1199,7 @@ function animateTileFromBag(tile, target, landedClass, onLand = null) {
     [
       { transform: "translate(0, 0) scale(0.5) rotate(-10deg)", opacity: 0 },
       { transform: "translate(0, -20px) scale(0.92) rotate(4deg)", opacity: 1, offset: 0.24 },
-      { transform: `translate(${deltaX}px, ${deltaY}px) scale(${Math.max(0.85, toRect.width / startSize)}) rotate(0deg)`, opacity: 1 }
+      { transform: `translate(${deltaX}px, ${deltaY}px) scale(${toRect.width / startSize}) rotate(0deg)`, opacity: 1 }
     ],
     { duration: 520, easing: "cubic-bezier(.18,.82,.2,1)" }
   );
@@ -1268,15 +1293,14 @@ function commitCpuPlacement(best) {
   state.chain += 1;
   state.lastEvent = `Blue CPU placed ${best.tile.rank}.`;
   render();
-  animateCpuTileToBoard(best.tile.id);
-  state.cpuTimer = window.setTimeout(() => {
+  animateCpuTileToBoard(best.tile.id, () => {
     resolvePlacedWild("blue", best.cellId, () => {
       resolvePostPlacement("blue", best.cellId);
       if (state.turn === "blue" && state.phase === "cpu") {
         state.cpuTimer = window.setTimeout(cpuStep, 380);
       }
     });
-  }, 460);
+  });
 }
 
 function getCpuThinkingCells(bestCellId) {
