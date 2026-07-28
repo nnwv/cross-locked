@@ -513,6 +513,12 @@ function selectRackTile(tileId) {
   if (state.turn !== "red" || state.phase !== "playing") return;
   const tile = state.racks.red.find((item) => item.id === tileId);
   if (!tile) return;
+  if (!isTilePlayable(tile)) {
+    state.selectedTileId = null;
+    setStatus("That tile can't be played right now. Tap another tile.");
+    render();
+    return;
+  }
   state.selectedTileId = tile.id;
   setStatus(tile.type === "wild" ? "Selected Wild. Tap any highlighted space next to an existing tile." : `Selected ${tile.rank}. Tap a highlighted board space.`);
   render();
@@ -801,8 +807,12 @@ function resolveFreshDraw(color) {
 }
 
 function hasPlayableTile(color) {
-  const openCells = Object.keys(state.board).filter((cellId) => !state.board[cellId]);
-  return state.racks[color].some((tile) => openCells.some((cellId) => canPlaceTile(tile, cellId).ok));
+  return state.racks[color].some(isTilePlayable);
+}
+
+function isTilePlayable(tile) {
+  return Object.keys(state.board)
+    .some((cellId) => !state.board[cellId] && canPlaceTile(tile, cellId).ok);
 }
 
 function checkHumanPlayableTiles() {
