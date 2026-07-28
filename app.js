@@ -1636,9 +1636,10 @@ function renderHud() {
   if (els.highScore) els.highScore.textContent = state.records.highGame;
   if (els.winStreak) els.winStreak.textContent = state.records.bestWinStreak;
   els.turnTitle.textContent = getTurnTitle();
-  els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
+  els.drawPlayBtn.textContent = state.phase === "gameOver" ? "NEW GAME" : "DRAW";
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
   els.endTurnBtn.disabled = state.turn !== "red" || state.phase !== "playing";
+  els.rulesBtn.disabled = false;
   document.querySelector(".rack-turn-card")?.classList.toggle("player-ready", state.turn === "red" && state.phase === "needDraw");
   if (state.phase === "needDraw") setStatus("Tap Draw to start. You will get one red tile.");
   if (state.phase === "drawing") setStatus("Drawing...");
@@ -1730,7 +1731,9 @@ els.drawPlayBtn.addEventListener("click", () => {
   }
 });
 els.endTurnBtn.addEventListener("click", endHumanTurn);
-els.rulesBtn.addEventListener("click", () => els.rulesDialog.showModal());
+els.rulesBtn.addEventListener("click", () => {
+  if (!els.rulesDialog.open) els.rulesDialog.showModal();
+});
 els.closeRulesBtn.addEventListener("click", () => els.rulesDialog.close());
 els.messageActionBtn.addEventListener("click", () => els.messageDialog.close());
 els.messageDialog.addEventListener("close", () => {
