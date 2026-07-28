@@ -136,6 +136,7 @@ const state = {
   bomb: null,
   scoringX: null,
   celebratingX: null,
+  celebratingLines: [],
   cpuThinkingCells: [],
   cpuTimer: null
 };
@@ -312,6 +313,7 @@ function setupRound() {
   state.bomb = null;
   state.scoringX = null;
   state.celebratingX = null;
+  state.celebratingLines = [];
   state.cpuThinkingCells = [];
   X_DEFS.flatMap((x) => x.cells).forEach((cell) => {
     state.board[cell.id] = null;
@@ -645,26 +647,42 @@ function animateCpuTileToBoard(tileId) {
 
 function resolvePostPlacement(color, cellId) {
   const celebration = getCompletedXCelebration(color, cellId);
-  if (celebration) {
+  const lineCelebrations = celebration ? [] : getCompletedLineCelebrations(color, cellId);
+  if (celebration || lineCelebrations.length) {
     state.phase = "celebrating";
     state.celebratingX = celebration;
-    state.lastEvent = `${TEAM_LABEL[color]} completed a ${celebration.label} for ${celebration.points}.`;
+    state.celebratingLines = lineCelebrations;
+    const points = celebration?.points || lineCelebrations.reduce((total, line) => total + line.points, 0);
+    const label = celebration?.label || lineCelebrations.map((line) => `${line.name} Line`).join(" + ");
+    state.lastEvent = `${TEAM_LABEL[color]} completed a ${label} for ${points}.`;
     setStatus(state.lastEvent);
     render();
     window.setTimeout(() => {
-      if (state.celebratingX?.xId === celebration.xId) {
-        state.celebratingX = null;
-        render();
-      }
+      state.celebratingX = null;
+      state.celebratingLines = [];
+      render();
       state.phase = color === "red" ? "placing" : "cpu";
       resolveFreshDraw(color);
       if (color === "blue" && state.turn === "blue" && state.phase === "cpu") {
         state.cpuTimer = window.setTimeout(cpuStep, 380);
       }
-    }, 760);
+    }, 980);
     return;
   }
   resolveFreshDraw(color);
+}
+
+function getCompletedLineCelebrations(color, cellId) {
+  return getLinesForCell(cellId)
+    .filter((line) => lineQualifiesForTeam(line, color))
+    .map((line) => ({
+      id: line.id,
+      color,
+      points: line.points,
+      name: line.name,
+      cells: [...line.cells],
+      anchorCellId: line.cells[Math.floor(line.cells.length / 2)]
+    }));
 }
 
 function getCompletedXCelebration(color, cellId) {
@@ -1479,11 +1497,15 @@ function renderBoard() {
       const tile = state.board[cell.id];
       const isScoringCell = state.scoringX?.xId === x.id;
       const isCelebratingCell = state.celebratingX?.xId === x.id;
+      const celebratingLines = state.celebratingLines.filter((line) => line.cells.includes(cell.id));
       if (isScoringCell) {
         cellEl.classList.add("x-scoring", state.scoringX.color);
       }
       if (isCelebratingCell) {
         cellEl.classList.add("x-complete", state.celebratingX.color);
+      }
+      if (celebratingLines.length) {
+        cellEl.classList.add("line-complete", celebratingLines[0].color);
       }
       if (state.cpuThinkingCells.includes(cell.id)) {
         cellEl.classList.add("cpu-thinking");
@@ -1496,12 +1518,22 @@ function renderBoard() {
         cellEl.classList.toggle("bomb-target", Boolean(state.bomb?.cells.includes(cell.id)));
         cellEl.append(renderTile(tile, false));
       }
-      if (isScoringCell && cell.center) {
+      if ((isScoringCell || isCelebratingCell) && cell.center) {
+        const xScore = isScoringCell ? state.scoringX : state.celebratingX;
         const points = document.createElement("span");
-        points.className = "x-points";
-        points.textContent = `+${state.scoringX.points}`;
+        points.className = `x-points ${xScore.color}`;
+        points.textContent = `+${xScore.points}`;
         cellEl.append(points);
       }
+      state.celebratingLines
+        .filter((line) => line.anchorCellId === cell.id)
+        .forEach((line) => {
+          cellEl.classList.add("line-score-anchor", line.color);
+          const points = document.createElement("span");
+          points.className = `x-points line-points ${line.color}`;
+          points.textContent = `+${line.points}`;
+          cellEl.append(points);
+        });
       cellEl.addEventListener("click", () => placeSelectedTile(cell.id));
       els.board.append(cellEl);
     });
@@ -1518,7 +1550,7 @@ function renderRack() {
   groupEl.className = "rack-group";
   const labelEl = document.createElement("span");
   labelEl.className = "rack-label";
-  labelEl.textContent = "Red Tiles";
+  labelEl.textContent = "Red Tile Rack";
   const tilesEl = document.createElement("div");
   tilesEl.className = "rack-tiles lite-rack";
   [...RANKS, "W"].forEach((rank) => {

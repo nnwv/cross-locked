@@ -652,6 +652,7 @@ h2 {
   font-weight: 820;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .tile-bag.bag-pop {
@@ -903,6 +904,46 @@ h2 {
 .cell.x-complete .tile {
   animation: xCompleteTile 760ms cubic-bezier(.2,.8,.2,1) forwards;
 }
+.cell.line-complete {
+  z-index: 4;
+}
+
+.cell.line-complete .tile {
+  animation: lineCompleteTile 980ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.cell.line-complete.red {
+  border-color: rgba(210, 59, 69, 0.72);
+  box-shadow: 0 0 0 3px rgba(210, 59, 69, 0.13), 0 10px 20px rgba(210, 59, 69, 0.14);
+}
+
+.cell.line-complete.blue {
+  border-color: rgba(23, 104, 194, 0.72);
+  box-shadow: 0 0 0 3px rgba(23, 104, 194, 0.13), 0 10px 20px rgba(23, 104, 194, 0.14);
+}
+
+.cell.line-score-anchor::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  inset: calc(var(--socket-size) * -0.22);
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: xLocationBurst 900ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.cell.line-score-anchor.red::after {
+  color: var(--red);
+}
+
+.cell.line-score-anchor.blue::after {
+  color: var(--blue);
+}
+
+.line-points {
+  animation-duration: 980ms;
+}
 
 .x-points {
   position: absolute;
@@ -922,6 +963,35 @@ h2 {
   pointer-events: none;
   transform: translate(-50%, -50%) scale(0.72);
   animation: xPointBurst 980ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+.x-points.red {
+  background: linear-gradient(180deg, #ef5a63, #b91f2a);
+}
+
+.x-points.blue {
+  background: linear-gradient(180deg, #3f8fe4, #1556a0);
+}
+
+.cell.center-cell.x-complete::after,
+.cell.center-cell.x-scoring::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  inset: calc(var(--socket-size) * -0.34);
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: xLocationBurst 760ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.cell.center-cell.x-complete.red::after,
+.cell.center-cell.x-scoring.red::after {
+  color: var(--red);
+}
+
+.cell.center-cell.x-complete.blue::after,
+.cell.center-cell.x-scoring.blue::after {
+  color: var(--blue);
 }
 
 @keyframes xScoreCell {
@@ -971,6 +1041,21 @@ h2 {
     transform: scale(1.12);
   }
 }
+@keyframes lineCompleteTile {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  24% {
+    transform: scale(1.12);
+  }
+  48% {
+    transform: scale(1.02);
+  }
+  68% {
+    transform: scale(1.09);
+  }
+}
 
 @keyframes xTileClear {
   0%, 40% {
@@ -999,6 +1084,20 @@ h2 {
   100% {
     opacity: 0;
     transform: translate(-50%, -130%) scale(1.08);
+  }
+}
+@keyframes xLocationBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+  28% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.65);
   }
 }
 
@@ -2279,8 +2378,8 @@ li {
   }
 
   .tile-bag strong {
-    padding: 3px 4px 2px;
-    font-size: 0.5rem;
+    padding: 3px 3px 2px;
+    font-size: 0.42rem;
   }
 
   .bag-mouth {
