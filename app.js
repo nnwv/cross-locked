@@ -266,22 +266,6 @@ function showMessage({ eyebrow, title, body, scoreCard = null, actionText = "Con
   if (!els.messageDialog.open) els.messageDialog.showModal();
 }
 
-function shouldShowMobileNotice() {
-  return window.matchMedia("(max-width: 680px), (pointer: coarse) and (max-width: 760px)").matches;
-}
-
-function showMobileNotice() {
-  if (!shouldShowMobileNotice()) return;
-  window.setTimeout(() => {
-    if (els.messageDialog.open) return;
-    showMessage({
-      eyebrow: "Heads up",
-      title: "Best on desktop or tablet",
-      body: "Cross Locked Lite is currently designed for desktop and tablet. You can still play on mobile, but the board is easier to use on a larger screen.",
-      actionText: "Play anyway"
-    });
-  }, 350);
-}
 
 function renderScoreCard(card) {
   const wrap = document.createElement("div");
@@ -1526,6 +1510,10 @@ function renderBoard() {
 
 function renderRack() {
   els.rack.innerHTML = "";
+  const promptPlayableTiles = state.turn === "red" && state.phase === "playing" && !state.selectedTileId;
+  const openCells = promptPlayableTiles
+    ? Object.keys(state.board).filter((cellId) => !state.board[cellId])
+    : [];
   const groupEl = document.createElement("div");
   groupEl.className = "rack-group";
   const labelEl = document.createElement("span");
@@ -1543,6 +1531,10 @@ function renderRack() {
     tileEl.dataset.count = String(Math.min(matchingTiles.length, 6));
     tileEl.dataset.rank = rank;
     tileEl.classList.toggle("selected", matchingTiles.some((item) => item.id === state.selectedTileId));
+    tileEl.classList.toggle(
+      "playable-prompt",
+      promptPlayableTiles && matchingTiles.some((item) => openCells.some((cellId) => canPlaceTile(item, cellId).ok))
+    );
     tileEl.setAttribute("aria-label", `Red ${rank}: ${matchingTiles.length}`);
     if (matchingTiles.length) tileEl.addEventListener("click", () => selectRackTile(tile.id));
     tilesEl.append(tileEl);
@@ -1575,8 +1567,8 @@ function renderHud() {
   els.blueRound2Row.hidden = !showRoundTwo;
   document.querySelector(".score-team-card.red")?.classList.toggle("active-turn", state.turn === "red" && !["gameOver", "roundOver"].includes(state.phase));
   document.querySelector(".score-team-card.blue")?.classList.toggle("active-turn", state.turn === "blue" && !["gameOver", "roundOver"].includes(state.phase));
-  els.highScore.textContent = state.records.highGame;
-  els.winStreak.textContent = state.records.bestWinStreak;
+  if (els.highScore) els.highScore.textContent = state.records.highGame;
+  if (els.winStreak) els.winStreak.textContent = state.records.bestWinStreak;
   els.turnTitle.textContent = getTurnTitle();
   els.drawPlayBtn.textContent = state.phase === "gameOver" ? "New Game" : "Draw";
   els.drawPlayBtn.disabled = state.phase !== "gameOver" && (state.turn !== "red" || state.phase !== "needDraw");
@@ -1682,4 +1674,3 @@ els.messageDialog.addEventListener("close", () => {
 });
 
 setupRound();
-showMobileNotice();
