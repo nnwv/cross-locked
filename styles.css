@@ -879,7 +879,6 @@ h2 {
 
 .cell.x-complete {
   z-index: 4;
-  animation: xCompleteGlow 760ms cubic-bezier(.2,.8,.2,1) forwards;
 }
 
 .cell.x-complete.red {
@@ -906,15 +905,8 @@ h2 {
   animation: xTileClear 980ms cubic-bezier(.2,.8,.2,1) forwards;
 }
 
-.cell.x-complete .tile {
-  animation: xCompleteTile 760ms cubic-bezier(.2,.8,.2,1) forwards;
-}
 .cell.line-complete {
   z-index: 4;
-}
-
-.cell.line-complete .tile {
-  animation: lineCompleteTile 980ms cubic-bezier(.2,.8,.2,1) forwards;
 }
 
 .cell.line-complete.red {
@@ -1023,42 +1015,6 @@ h2 {
   to {
     transform: scale(1.07);
     box-shadow: 0 0 0 5px rgba(23, 104, 194, 0.16);
-  }
-}
-
-@keyframes xCompleteGlow {
-  0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: scale(1.12);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes xCompleteTile {
-  0%, 100% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(1.12);
-  }
-}
-@keyframes lineCompleteTile {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  24% {
-    transform: scale(1.12);
-  }
-  48% {
-    transform: scale(1.02);
-  }
-  68% {
-    transform: scale(1.09);
   }
 }
 
