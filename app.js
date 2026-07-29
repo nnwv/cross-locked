@@ -1412,9 +1412,6 @@ function renderRiskMeter() {
 
 function renderBoard() {
   els.board.innerHTML = "";
-  els.board.classList.toggle("bomb-active", Boolean(state.bomb));
-  els.board.classList.toggle("bomb-red", state.bomb?.color === "red");
-  els.board.classList.toggle("bomb-blue", state.bomb?.color === "blue");
   const selected = state.turn === "red" && state.phase === "playing"
     ? state.racks.red.find((item) => item.id === state.selectedTileId)
     : null;

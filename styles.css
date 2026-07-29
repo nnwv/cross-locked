@@ -559,35 +559,6 @@ h2 {
   padding: 0;
 }
 
-.board.bomb-active {
-  animation: boardBombShake 560ms cubic-bezier(.2,.8,.2,1);
-}
-
-.board.bomb-red {
-  filter: drop-shadow(0 0 18px rgba(255, 0, 0, 0.22));
-}
-
-.board.bomb-blue {
-  filter: drop-shadow(0 0 18px rgba(0, 175, 240, 0.22));
-}
-
-@keyframes boardBombShake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  16% {
-    transform: translateX(-5px);
-  }
-  32% {
-    transform: translateX(5px);
-  }
-  48% {
-    transform: translateX(-3px);
-  }
-  64% {
-    transform: translateX(3px);
-  }
-}
 
 .cell {
   position: relative;
