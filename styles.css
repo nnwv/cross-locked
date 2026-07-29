@@ -1430,6 +1430,46 @@ h2 {
   gap: 6px;
 }
 
+@media (min-width: 861px) {
+  .rack-card {
+    grid-template-columns: minmax(60px, 76px) minmax(320px, 440px) minmax(360px, 1fr);
+    justify-content: stretch;
+    height: 88px;
+    min-height: 88px;
+    max-height: 88px;
+  }
+
+  .rack-turn-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(31px, auto) 38px;
+    align-content: center;
+  }
+
+  .rack-turn-card .turn-copy {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+  }
+
+  .rack-turn-card .status-text {
+    height: 2.6em;
+    min-height: 2.6em;
+    margin: 0;
+  }
+
+  .rack-turn-card .risk-meter {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .rack-turn-card .turn-actions {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
 .rack-turn-card.player-ready {
   animation: turnReadyBounce 1.25s cubic-bezier(.2,.8,.2,1) infinite;
 }
