@@ -1,51 +1,25 @@
-# Cross Locked MVP
+# Cross Locked Lite
 
-This is a first playable MVP for Cross Locked as a responsive browser game. It is built with plain HTML, CSS, and JavaScript so it can run immediately on phones, tablets, and desktop browsers, and later be wrapped for iOS/Android with a tool such as Capacitor.
+Cross Locked Lite is a two-round strategy tile game played in the browser. The human Red player competes against the Blue CPU by building matching-number sets and clean number sequences across five X-shaped boards.
 
-## Run Locally
+## How to play
 
-Open `index.html` directly in a browser, or serve the folder:
+- Each X begins with a center tile numbered 3, 4, or 5.
+- Draw once to start your turn, then place a playable Red tile. A fresh tile is drawn automatically after every placement.
+- Tiles must touch an existing tile and continue either matching numbers or a clean sequence. Wild tiles can fill any legal neighboring space and become the number they represent.
+- Random Red and Blue bombs remove one or two non-center tiles and end the current turn. You can also choose End Turn at any time after drawing.
 
-```powershell
-python -m http.server 4173 --bind 127.0.0.1
-```
+## Scoring
 
-Then visit:
+- Short line: 250 points
+- Long line: 500 points
+- Small X: 1,000 points
+- Big X: 2,000 points
 
-```text
-http://127.0.0.1:4173/
-```
+A completed X receives its X bonus without additional line points. The board stays filled, and the game ends after two rounds.
 
-## Implemented MVP Features
+## Run locally
 
-- Single-player Red vs Blue CPU.
-- Five X board layout: four small Xs and one center Super X.
-- Small Xs use two 3-tile lines. The Super X uses two 5-tile lines.
-- Three-round game with cumulative scoring.
-- Red and Blue scoring tile bags using ranks 2 through A plus jokers.
-- Yellow action tiles: Lock, Unlock, Replace 1, Replace 2, Super Replace, Draw 4.
-- Draw and Play turn flow.
-- Draw and Swap for groups of three matching scoring tiles.
-- Touch-first tile selection and board placement.
-- Basic computer opponent that draws, places, replaces, and locks.
-- Round scoring for completed Xs, completed lines, and tile values.
-- Responsive UI for tablet and phone widths.
+This is a static HTML, CSS, and JavaScript project with no build step. Open `index.html` directly, or serve the folder with any local web server.
 
-## Rule Assumptions
-
-The instructions describe five Xs, short lines, long lines, and a large Super X, but do not include a board diagram. This MVP assumes:
-
-- Each small X has five playable spaces: four corners plus center.
-- The Super X has nine playable spaces: two 5-tile diagonal lines sharing the center.
-- A completed X requires all spaces in that X to be filled by one team color or jokers, and both diagonal lines must be a valid sequence or like-kind group.
-- A locked line prevents play or replacement on any cell in that line.
-
-These are good enough for a playable MVP, but the real board art should be confirmed before production.
-
-## Next Production Steps
-
-- Confirm the exact board diagram and line definitions with the client.
-- Add a guided tutorial using the hint document content.
-- Improve CPU strategy after the physical game is play-tested.
-- Split game rules into a separate module before online multiplayer work.
-- Add saved games and app-shell packaging for iOS/Android.
+The current MVP supports single-player play against the CPU on desktop, tablet, and mobile browsers. Online multiplayer and saved player records are not included yet.

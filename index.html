@@ -11,8 +11,8 @@
     <link rel="icon" href="assets/favicon.ico?v=20260728-x-mark" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20260728-x-mark">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png?v=20260728-x-mark">
-    <link rel="manifest" href="manifest.json?v=20260728-x-mark">
-    <link rel="stylesheet" href="styles.css?v=20260728-first-terminal-status">
+    <link rel="manifest" href="manifest.json?v=20260728-hardening-cleanup">
+    <link rel="stylesheet" href="styles.css?v=20260728-clear-instructions">
   </head>
   <body>
     <div class="app-shell">
@@ -67,8 +67,8 @@
               <div class="turn-copy">
                 <h2 id="turnTitle">Your turn</h2>
                 <p id="statusText" class="status-text terminal-readout" aria-live="polite" aria-atomic="true">
-                  <span class="status-measure" aria-hidden="true">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</span>
-                  <span class="status-output" aria-hidden="true">Draw one tile, place any red tile that fits, then see what fresh tile comes next.</span>
+                  <span class="status-measure" aria-hidden="true">Press DRAW to start your turn.</span>
+                  <span class="status-output" aria-hidden="true">Press DRAW to start your turn.</span>
                 </p>
               </div>
               <div class="risk-meter" aria-label="Bomb risk">
@@ -88,18 +88,17 @@
 
     <dialog id="rulesDialog">
       <div class="dialog-head">
-        <h2>Cross Locked Lite</h2>
+        <h2>How to Play</h2>
         <button id="closeRulesBtn" class="icon-button" aria-label="Close rules">x</button>
       </div>
-      <ul>
-        <li>Score points by completing as many lines and Xs as possible with tiles of just your color, Red.</li>
-        <li>Prevent the opponent, Blue, from doing the same.</li>
-        <li>On your turn, place as many tiles as you can in sequences like 4-5-6 or like kind like 4-4-4.</li>
-        <li>For each tile played, you receive a fresh tile. Your turn ends when you get hit with a random bomb or choose End Turn.</li>
-        <li>Random bombs remove 1 or 2 tiles from the board.</li>
-        <li>Score 250 points for each short line, 500 for a long line, 1000 for a small X, and 2000 for a large X. No line points are awarded on a completed X.</li>
-        <li>Each game has 2 rounds. Each round ends when the board is filled. High score wins.</li>
-      </ul>
+      <ol class="rules-steps">
+        <li><strong>Fill the Xs.</strong> You are Red and Blue CPU is your opponent. Complete lines and Xs using only tiles of your color.</li>
+        <li><strong>Start your turn.</strong> Press DRAW once to add a red tile to your rack. Blue CPU starts Round 1; Red starts Round 2.</li>
+        <li><strong>Choose and place.</strong> Tap a playable rack tile, then tap a red-outlined board space. Each line must use matching numbers, like 4-4-4, or a clean sequence that changes by one, like 4-5-6. Tiles normally build beside an existing tile; the far ends of the Big X may be played early when they fit the full sequence.</li>
+        <li><strong>Use WILD tiles.</strong> A WILD can fill any red-outlined legal space. Once placed, it becomes the number needed there.</li>
+        <li><strong>Keep going or stop.</strong> After every placement, the bag automatically draws your next tile. Play again or press END TURN at any time. A random Red or Blue Bomb removes one or two non-center tiles of its color and ends the turn.</li>
+        <li><strong>Score and win.</strong> A short line scores 250 points and a long line scores 500. A completed same-color Small X scores 1,000; a Big X scores 2,000. A completed X scores its X bonus instead of its line points. After two rounds, the highest combined score wins.</li>
+      </ol>
     </dialog>
 
     <dialog id="messageDialog" class="message-dialog">
@@ -109,6 +108,6 @@
       <button id="messageActionBtn" class="primary">Continue</button>
     </dialog>
 
-    <script src="app.js?v=20260728-no-local-records"></script>
+    <script src="app.js?v=20260728-clear-instructions"></script>
   </body>
 </html>
