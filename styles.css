@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Ethnocentric";
+  src: url("assets/fonts/ethnocentric-regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 :root {
   --app-bg: #f5f5f7;
   --surface: rgba(255, 255, 255, 0.86);
@@ -30,12 +37,21 @@
 }
 
 html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   background: var(--app-bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   color: var(--ink);
   background:
     radial-gradient(circle at 18% 12%, rgba(0, 122, 255, 0.08), transparent 28%),
@@ -56,6 +72,7 @@ button {
   cursor: pointer;
   transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:hover:not(:disabled) {
@@ -88,7 +105,8 @@ button:disabled {
 .app-shell {
   width: min(1440px, 100%);
   height: 100vh;
-  height: 100dvh;
+  height: 100svh;
+  max-height: 100svh;
   min-height: 0;
   margin: 0 auto;
   padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
@@ -166,10 +184,12 @@ h2 {
 }
 
 .board-brand strong {
-  font-size: clamp(0.72rem, 1.25vw, 1rem);
+  font-family: "Ethnocentric", var(--app-font);
+  font-size: clamp(0.68rem, 1.08vw, 0.88rem);
   font-style: normal;
-  font-weight: 900;
-  letter-spacing: 0.02em;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.05;
 }
 
 
@@ -241,14 +261,14 @@ h2 {
 .score-team-card.red {
   --score-glow: rgba(255, 0, 0, 0.18);
   grid-column: 1 / 4;
-  grid-row: 6 / 8;
+  grid-row: 6 / 9;
   justify-self: stretch;
 }
 
 .score-team-card.blue {
   --score-glow: rgba(0, 175, 240, 0.18);
   grid-column: 11 / 14;
-  grid-row: 6 / 8;
+  grid-row: 6 / 9;
   justify-self: stretch;
 }
 
@@ -382,6 +402,7 @@ h2 {
   --socket-size: min(calc(100cqw / 13), calc(100cqh / 13), 72px);
   position: relative;
   container-type: size;
+  isolation: isolate;
   min-height: 0;
   height: 100%;
   border: 0;
@@ -557,6 +578,9 @@ h2 {
   height: 100%;
   min-height: 0;
   padding: 0;
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
 }
 
 
@@ -709,11 +733,9 @@ h2 {
 
 @keyframes cpuThinkPulse {
   from {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(0, 175, 240, 0.08);
   }
   to {
-    transform: scale(1.07);
     box-shadow: 0 0 0 5px rgba(0, 175, 240, 0.16);
   }
 }
@@ -811,35 +833,27 @@ h2 {
 
 @keyframes bombTargetPulse {
   0% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(29, 29, 31, 0);
   }
   25% {
-    transform: scale(1.09);
     box-shadow: 0 0 0 5px rgba(255, 204, 0, 0.34);
   }
   62% {
-    transform: scale(1.03);
     box-shadow: 0 0 0 8px rgba(255, 0, 0, 0.16);
   }
   100% {
-    transform: scale(0.82);
-    opacity: 0.24;
     box-shadow: 0 0 0 14px rgba(29, 29, 31, 0);
   }
 }
 
 @keyframes bombMissCell {
   0% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(29, 29, 31, 0);
   }
   30% {
-    transform: scale(1.08);
     box-shadow: 0 0 0 6px rgba(255, 204, 0, 0.22);
   }
   100% {
-    transform: scale(1);
     box-shadow: 0 0 0 14px rgba(29, 29, 31, 0);
   }
 }
@@ -1314,7 +1328,7 @@ h2 {
 .copyright-note {
   position: absolute;
   left: 50%;
-  top: calc(50% + (var(--socket-size) * 5.58));
+  top: calc(50% + (var(--socket-size) * 5.5));
   z-index: 2;
   width: calc(var(--socket-size) * 7);
   margin: 0;
@@ -1323,7 +1337,7 @@ h2 {
   font-weight: 680;
   line-height: 1.25;
   text-align: center;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   pointer-events: none;
 }
 
@@ -1522,41 +1536,41 @@ h2 {
   box-shadow: 0 18px 34px rgba(0, 175, 240, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.cell.cpu-landed {
+.cell.cpu-landed .tile {
   animation: cpuTileLand 360ms cubic-bezier(.2,.8,.2,1);
 }
 
-.cell.board-deal-land {
+.cell.board-deal-land .tile {
   animation: boardDealLand 430ms cubic-bezier(.2,.8,.2,1);
 }
 
 @keyframes cpuTileLand {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(0, 175, 240, 0);
+    filter: drop-shadow(0 0 0 rgba(0, 175, 240, 0));
   }
   45% {
     transform: scale(1.08);
-    box-shadow: 0 0 0 5px rgba(0, 175, 240, 0.18);
+    filter: drop-shadow(0 0 6px rgba(0, 175, 240, 0.4));
   }
   100% {
     transform: scale(1);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 2px rgba(0, 0, 0, 0.05);
+    filter: drop-shadow(0 0 0 rgba(0, 175, 240, 0));
   }
 }
 
 @keyframes boardDealLand {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(245, 198, 92, 0);
+    filter: drop-shadow(0 0 0 rgba(245, 198, 92, 0));
   }
   44% {
     transform: scale(1.1);
-    box-shadow: 0 0 0 5px rgba(245, 198, 92, 0.26);
+    filter: drop-shadow(0 0 6px rgba(245, 198, 92, 0.42));
   }
   100% {
     transform: scale(1);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 2px rgba(0, 0, 0, 0.05);
+    filter: drop-shadow(0 0 0 rgba(245, 198, 92, 0));
   }
 }
 
@@ -1918,12 +1932,12 @@ li {
 
   .score-team-card.red {
     grid-column: 1 / 4;
-    grid-row: 6 / 8;
+    grid-row: 6 / 9;
   }
 
   .score-team-card.blue {
     grid-column: 11 / 14;
-    grid-row: 6 / 8;
+    grid-row: 6 / 9;
   }
 
 
@@ -1985,6 +1999,7 @@ li {
   }
 
   :root {
+
     --tile-size: clamp(30px, 10vw, 38px);
   }
 
@@ -2078,15 +2093,15 @@ li {
   }
 
   .board-brand strong {
-    font-size: 0.62rem;
+    font-size: 0.61rem;
   }
 
 
   .copyright-note {
-    top: calc(50% + (var(--socket-size) * 5.58));
+    top: calc(50% + (var(--socket-size) * 5.5));
     width: calc(var(--socket-size) * 7);
     font-size: 0.46rem;
-    transform: translateX(-50%);
+    transform: translate(-50%, -100%);
   }
 
   .rack-tiles {
@@ -2099,7 +2114,7 @@ li {
 
 }
 
-@media (orientation: landscape) and (max-height: 520px) and (min-width: 700px) {
+@media (orientation: landscape) and (max-height: 520px) and (min-width: 560px) {
   .app-shell {
     padding: 4px;
   }
