@@ -5,18 +5,19 @@ const SHORT_LINE_POINTS = 250;
 const LONG_LINE_POINTS = 500;
 const SMALL_X_POINTS = 1000;
 const BIG_X_POINTS = 2000;
-const BASE_BOMB_CHANCE = 8;
-const BOMB_CHANCE_STEP = 4;
-const MAX_BOMB_CHANCE = 28;
+const BASE_BOMB_CHANCE = 5;
+const BOMB_CHANCE_STEP = 5;
+const MAX_BOMB_CHANCE = 25;
+const MIN_EFFECTIVE_BOMB_CHANCE = 3;
+const MAX_EFFECTIVE_BOMB_CHANCE = 27;
 const WILD_DRAW_CHANCE = 12;
 const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
 const BOMB_LABEL = { red: "Red Bomb", blue: "Blue Bomb" };
 const DRAW_ASSIST_CHANCE = 34;
 const STUCK_DRAW_ASSIST_CHANCE = 88;
 const RESCUE_DRAW_LIMIT = 2;
-const BOMB_MARGIN_ADJUSTMENT = { behind: -3, close: 0, ahead: 5 };
+const BOMB_MARGIN_ADJUSTMENT = { behind: -2, close: 0, ahead: 2 };
 const DRAW_ASSIST_MARGIN_ADJUSTMENT = { behind: 10, close: 0, ahead: -4 };
-const RESCUE_BOMB_CHANCE = { behind: 14, close: 28, ahead: 44 };
 const TWO_TILE_BOMB_CHANCE = { behind: 0.25, close: 0.5, ahead: 0.7 };
 const CPU_PASS_CHANCE = {
   behind: 0.01,
@@ -157,6 +158,7 @@ const els = {
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
   riskPips: document.querySelector("#riskPips"),
+  riskValue: document.querySelector("#riskValue"),
   drawPlayBtn: document.querySelector("#drawPlayBtn"),
   endTurnBtn: document.querySelector("#endTurnBtn"),
   rulesDialog: document.querySelector("#rulesDialog"),
@@ -822,6 +824,7 @@ function tryRescueDraw(color) {
   const tile = drawPlayableRackTile(color) || drawSmartRackTile(color);
   const fromRect = color === "red" ? getTileBagRect() : null;
   state.racks[color].push(tile);
+  state.bombChance = nextBombChance();
   state.lastEvent = `${TEAM_LABEL[color]} had no legal move and pulled ${describeTile(tile)}.`;
   setStatus(`${TEAM_LABEL[color]} has no legal move. Drawing one more tile.`);
   state.phase = color === "red" ? "drawing" : "cpu";
@@ -843,7 +846,7 @@ function tryRescueDraw(color) {
 }
 
 function pickRescueBombColor(color) {
-  return Math.random() * 100 < RESCUE_BOMB_CHANCE[getMarginBand(color)] ? color : null;
+  return Math.random() * 100 < getEffectiveBombChance(color) ? color : null;
 }
 
 function getScoreMargin(color) {
@@ -862,7 +865,7 @@ function getMarginBand(color) {
 
 function getEffectiveBombChance(color) {
   const adjustedChance = state.bombChance + BOMB_MARGIN_ADJUSTMENT[getMarginBand(color)];
-  return Math.max(4, Math.min(MAX_BOMB_CHANCE, adjustedChance));
+  return Math.max(MIN_EFFECTIVE_BOMB_CHANCE, Math.min(MAX_EFFECTIVE_BOMB_CHANCE, adjustedChance));
 }
 
 function pickFreshEvent(color) {
@@ -1416,7 +1419,9 @@ function renderRiskMeter() {
   if (!els.riskPips) return;
   els.riskPips.innerHTML = "";
   const effectiveChance = getEffectiveBombChance(state.turn);
-  const active = Math.max(1, Math.ceil(((effectiveChance - 4) / (MAX_BOMB_CHANCE - 4 || 1)) * 5));
+  const active = Math.max(1, Math.min(5, Math.round((state.bombChance - BASE_BOMB_CHANCE) / BOMB_CHANCE_STEP) + 1));
+  if (els.riskValue) els.riskValue.textContent = `${effectiveChance}%`;
+  els.riskPips.closest(".risk-meter")?.setAttribute("aria-label", `Bomb risk ${effectiveChance} percent. Level ${active} of 5.`);
   for (let index = 1; index <= 5; index += 1) {
     const pip = document.createElement("span");
     pip.className = index <= active ? "active" : "";

@@ -1385,7 +1385,7 @@ h2 {
   grid-column: 1;
   grid-row: 2;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto auto minmax(60px, 84px);
   align-items: center;
   gap: 6px;
   margin: 0;
@@ -1395,11 +1395,19 @@ h2 {
   text-transform: uppercase;
 }
 
+.risk-value {
+  min-width: 3ch;
+  color: var(--ink);
+  font-size: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .risk-pips {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
-  width: min(84px, 100%);
+  width: 100%;
 }
 
 .risk-pips span {
