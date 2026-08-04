@@ -10,10 +10,14 @@ const BOMB_CHANCE_STEP = 4;
 const MAX_BOMB_CHANCE = 28;
 const WILD_DRAW_CHANCE = 12;
 const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
+const BOMB_LABEL = { red: "Red Bomb", blue: "Blue Bomb" };
 const DRAW_ASSIST_CHANCE = 34;
 const STUCK_DRAW_ASSIST_CHANCE = 88;
 const RESCUE_DRAW_LIMIT = 2;
-const RESCUE_BOMB_CHANCE = 38;
+const BOMB_MARGIN_ADJUSTMENT = { behind: -3, close: 0, ahead: 5 };
+const DRAW_ASSIST_MARGIN_ADJUSTMENT = { behind: 10, close: 0, ahead: -4 };
+const RESCUE_BOMB_CHANCE = { behind: 14, close: 28, ahead: 44 };
+const TWO_TILE_BOMB_CHANCE = { behind: 0.25, close: 0.5, ahead: 0.7 };
 const CPU_PASS_CHANCE = {
   behind: 0.01,
   close: 0.06,
@@ -216,7 +220,9 @@ function drawRackTile(color, allowWild = true) {
 }
 
 function drawSmartRackTile(color) {
-  const assistChance = hasPlayableTile(color) ? DRAW_ASSIST_CHANCE : STUCK_DRAW_ASSIST_CHANCE;
+  const marginBand = getMarginBand(color);
+  const baseAssistChance = hasPlayableTile(color) ? DRAW_ASSIST_CHANCE : STUCK_DRAW_ASSIST_CHANCE;
+  const assistChance = Math.max(0, Math.min(95, baseAssistChance + DRAW_ASSIST_MARGIN_ADJUSTMENT[marginBand]));
   if (Math.random() * 100 >= assistChance) return drawRackTile(color);
   return drawPlayableRackTile(color) || drawRackTile(color);
 }
@@ -749,7 +755,7 @@ function passTurnTo(nextTeam, eventText) {
 
 function resolveFreshDraw(color) {
   if (checkRoundEnd()) return;
-  const event = pickFreshEvent();
+  const event = pickFreshEvent(color);
   if (event === "number") {
     const tile = drawSmartRackTile(color);
     const fromRect = color === "red" ? getTileBagRect() : null;
@@ -773,8 +779,7 @@ function resolveFreshDraw(color) {
     }
     return;
   }
-  const bombColor = event === "redBomb" ? "red" : "blue";
-  triggerBomb(color, bombColor);
+  triggerBomb(color, color);
 }
 
 function hasPlayableTile(color) {
@@ -810,7 +815,7 @@ function tryRescueDraw(color) {
   const bombColor = pickRescueBombColor(color);
   if (bombColor) {
     state.lastEvent = `${TEAM_LABEL[color]} had no legal move and pulled a rescue bomb.`;
-    setStatus(`${TEAM_LABEL[color]} has no legal move. A random ${TEAM_LABEL[bombColor]} Bomb was drawn.`);
+    setStatus(`${TEAM_LABEL[color]} has no legal move. A random ${BOMB_LABEL[bombColor]} was drawn.`);
     triggerBomb(color, bombColor);
     return true;
   }
@@ -838,12 +843,7 @@ function tryRescueDraw(color) {
 }
 
 function pickRescueBombColor(color) {
-  const margin = getScoreMargin(color);
-  const bombChance = margin < -30 ? RESCUE_BOMB_CHANCE + 18 : margin > 45 ? RESCUE_BOMB_CHANCE - 12 : RESCUE_BOMB_CHANCE;
-  if (Math.random() * 100 >= bombChance) return null;
-  const opponent = otherTeam(color);
-  const opponentBombChance = margin < -30 ? 0.72 : margin > 45 ? 0.34 : 0.54;
-  return Math.random() < opponentBombChance ? opponent : color;
+  return Math.random() * 100 < RESCUE_BOMB_CHANCE[getMarginBand(color)] ? color : null;
 }
 
 function getScoreMargin(color) {
@@ -853,10 +853,22 @@ function getScoreMargin(color) {
   return color === "red" ? redTotal - blueTotal : blueTotal - redTotal;
 }
 
-function pickFreshEvent() {
+function getMarginBand(color) {
+  const margin = getScoreMargin(color);
+  if (margin <= -SHORT_LINE_POINTS) return "behind";
+  if (margin >= SHORT_LINE_POINTS) return "ahead";
+  return "close";
+}
+
+function getEffectiveBombChance(color) {
+  const adjustedChance = state.bombChance + BOMB_MARGIN_ADJUSTMENT[getMarginBand(color)];
+  return Math.max(4, Math.min(MAX_BOMB_CHANCE, adjustedChance));
+}
+
+function pickFreshEvent(color) {
   const roll = Math.random() * 100;
-  if (roll >= state.bombChance) return "number";
-  return Math.random() < 0.5 ? "redBomb" : "blueBomb";
+  if (roll >= getEffectiveBombChance(color)) return "number";
+  return "bomb";
 }
 
 function nextBombChance() {
@@ -866,7 +878,8 @@ function nextBombChance() {
 function pickBombTargets(color) {
   const candidates = Object.entries(state.board)
     .filter(([cellId, tile]) => tile?.color === color && !getCellDef(cellId).center);
-  const count = Math.min(candidates.length, Math.random() < 0.5 ? 1 : 2);
+  const twoTileChance = TWO_TILE_BOMB_CHANCE[getMarginBand(color)];
+  const count = Math.min(candidates.length, Math.random() < twoTileChance ? 2 : 1);
   return shuffle(candidates).slice(0, count).map(([cellId]) => cellId);
 }
 
@@ -880,9 +893,9 @@ function triggerBomb(drawColor, bombColor) {
   state.bomb = {
     color: bombColor,
     cells: [],
-    message: removed ? `${TEAM_LABEL[bombColor]} Bomb! Removing ${removed} ${bombColor} tile${removed === 1 ? "" : "s"}.` : `${TEAM_LABEL[bombColor]} Bomb found no removable ${bombColor} tiles.`
+    message: removed ? `${BOMB_LABEL[bombColor]}! Removing ${removed} ${bombColor} tile${removed === 1 ? "" : "s"}.` : `${BOMB_LABEL[bombColor]} found no removable ${bombColor} tiles.`
   };
-  state.lastEvent = `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb.`;
+  state.lastEvent = `${TEAM_LABEL[drawColor]} drew ${BOMB_LABEL[bombColor]}.`;
   setStatus(state.bomb.message);
   render();
   animateBombIconToTargets(bombColor, fromRect, targets, () => {
@@ -890,7 +903,7 @@ function triggerBomb(drawColor, bombColor) {
       state.board[cellId] = null;
     });
     state.bomb = null;
-    passTurnTo(otherTeam(drawColor), `${TEAM_LABEL[drawColor]} drew ${TEAM_LABEL[bombColor]} Bomb. ${removed} ${bombColor} tile${removed === 1 ? "" : "s"} removed.`);
+    passTurnTo(otherTeam(drawColor), `${TEAM_LABEL[drawColor]} drew ${BOMB_LABEL[bombColor]}. ${removed} ${bombColor} tile${removed === 1 ? "" : "s"} removed.`);
   });
 }
 
@@ -1199,8 +1212,8 @@ function getCpuPassChance() {
   const redTotal = state.scores.red + liveScore.red.total;
   const blueTotal = state.scores.blue + liveScore.blue.total;
   const margin = blueTotal - redTotal;
-  if (margin < -35) return CPU_PASS_CHANCE.behind;
-  if (margin > 55) return CPU_PASS_CHANCE.ahead;
+  if (margin <= -SHORT_LINE_POINTS) return CPU_PASS_CHANCE.behind;
+  if (margin >= SHORT_LINE_POINTS) return CPU_PASS_CHANCE.ahead;
   return CPU_PASS_CHANCE.close;
 }
 
@@ -1402,7 +1415,8 @@ function render() {
 function renderRiskMeter() {
   if (!els.riskPips) return;
   els.riskPips.innerHTML = "";
-  const active = Math.max(1, Math.ceil(((state.bombChance - BASE_BOMB_CHANCE) / (MAX_BOMB_CHANCE - BASE_BOMB_CHANCE || 1)) * 5));
+  const effectiveChance = getEffectiveBombChance(state.turn);
+  const active = Math.max(1, Math.ceil(((effectiveChance - 4) / (MAX_BOMB_CHANCE - 4 || 1)) * 5));
   for (let index = 1; index <= 5; index += 1) {
     const pip = document.createElement("span");
     pip.className = index <= active ? "active" : "";
