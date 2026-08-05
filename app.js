@@ -5,11 +5,11 @@ const SHORT_LINE_POINTS = 250;
 const LONG_LINE_POINTS = 500;
 const SMALL_X_POINTS = 1000;
 const BIG_X_POINTS = 2000;
-const BASE_BOMB_CHANCE = 5;
+const BASE_BOMB_CHANCE = 7;
 const BOMB_CHANCE_STEP = 5;
-const MAX_BOMB_CHANCE = 25;
-const MIN_EFFECTIVE_BOMB_CHANCE = 3;
-const MAX_EFFECTIVE_BOMB_CHANCE = 27;
+const MAX_BOMB_CHANCE = 27;
+const MIN_EFFECTIVE_BOMB_CHANCE = 5;
+const MAX_EFFECTIVE_BOMB_CHANCE = 29;
 const WILD_DRAW_CHANCE = 12;
 const TEAM_LABEL = { red: "Red", blue: "Blue CPU" };
 const BOMB_LABEL = { red: "Red Bomb", blue: "Blue Bomb" };
@@ -158,7 +158,6 @@ const els = {
   turnTitle: document.querySelector("#turnTitle"),
   statusText: document.querySelector("#statusText"),
   riskPips: document.querySelector("#riskPips"),
-  riskValue: document.querySelector("#riskValue"),
   drawPlayBtn: document.querySelector("#drawPlayBtn"),
   endTurnBtn: document.querySelector("#endTurnBtn"),
   rulesDialog: document.querySelector("#rulesDialog"),
@@ -1418,10 +1417,8 @@ function render() {
 function renderRiskMeter() {
   if (!els.riskPips) return;
   els.riskPips.innerHTML = "";
-  const effectiveChance = getEffectiveBombChance(state.turn);
   const active = Math.max(1, Math.min(5, Math.round((state.bombChance - BASE_BOMB_CHANCE) / BOMB_CHANCE_STEP) + 1));
-  if (els.riskValue) els.riskValue.textContent = `${effectiveChance}%`;
-  els.riskPips.closest(".risk-meter")?.setAttribute("aria-label", `Bomb risk ${effectiveChance} percent. Level ${active} of 5.`);
+  els.riskPips.closest(".risk-meter")?.setAttribute("aria-label", `Bomb risk level ${active} of 5.`);
   for (let index = 1; index <= 5; index += 1) {
     const pip = document.createElement("span");
     pip.className = index <= active ? "active" : "";
