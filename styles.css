@@ -1441,8 +1441,8 @@ h2 {
 
 @media (min-width: 861px) {
   .rack-card {
-    grid-template-columns: minmax(60px, 76px) minmax(320px, 440px) minmax(360px, 1fr);
-    justify-content: stretch;
+    grid-template-columns: minmax(60px, 76px) minmax(320px, 440px) minmax(360px, 620px);
+    justify-content: start;
     height: 88px;
     min-height: 88px;
     max-height: 88px;
